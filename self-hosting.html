@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Self-Hosting Guide</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Playfair+Display:wght@700;900&family=Source+Serif+4:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --ink:   #0d1117;
+      --bg:    #0d1117;
+      --panel: #161b22;
+      --edge:  #30363d;
+      --green: #3fb950;
+      --blue:  #58a6ff;
+      --purple:#bc8cff;
+      --gold:  #e3b341;
+      --muted: #8b949e;
+      --text:  #c9d1d9;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Source Serif 4', Georgia, serif;
+      min-height: 100vh;
+      padding: 3rem 1.5rem 6rem;
+    }
+
+    /* ── HEADER ── */
+    .page-header {
+      max-width: 720px;
+      margin: 0 auto 3rem;
+      border-bottom: 1px solid var(--edge);
+      padding-bottom: 1.75rem;
+    }
+
+    .eyebrow {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.68rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--green);
+      margin-bottom: 0.6rem;
+    }
+
+    h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(2rem, 5.5vw, 3.2rem);
+      font-weight: 900;
+      line-height: 1.08;
+      letter-spacing: -0.02em;
+      color: #fff;
+    }
+
+    .subtitle {
+      margin-top: 0.8rem;
+      font-size: 0.975rem;
+      font-weight: 300;
+      font-style: italic;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    /* ── SECTION LABELS ── */
+    .section-label {
+      max-width: 720px;
+      margin: 2.5rem auto 0;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.7rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+    .section-label span { color: var(--purple); }
+    .section-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--edge);
+    }
+
+    /* ── STEPS ── */
+    .steps {
+      max-width: 720px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .step {
+      display: grid;
+      grid-template-columns: 3rem 1fr;
+      gap: 0 1.25rem;
+      padding: 1.75rem 0;
+      border-bottom: 1px solid var(--edge);
+      opacity: 0;
+      transform: translateY(14px);
+      animation: rise 0.45s ease forwards;
+    }
+    .step:last-child { border-bottom: none; }
+
+    .step-num {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--gold);
+      text-align: right;
+      padding-top: 0.3rem;
+      letter-spacing: 0.05em;
+      user-select: none;
+    }
+
+    .step-body { padding-top: 0.1rem; }
+
+    .step-heading {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #fff;
+      line-height: 1.3;
+      margin-bottom: 0.5rem;
+    }
+
+    .step-text {
+      font-size: 0.95rem;
+      line-height: 1.8;
+      color: var(--text);
+      font-weight: 300;
+    }
+
+    /* ── CODE BLOCK ── */
+    .code-block {
+      margin-top: 0.85rem;
+      background: #010409;
+      border: 1px solid var(--edge);
+      border-radius: 6px;
+      padding: 0.85rem 1rem;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.78rem;
+      color: var(--green);
+      line-height: 1.7;
+      overflow-x: auto;
+      white-space: pre;
+      position: relative;
+    }
+
+    .code-block .comment { color: var(--muted); }
+    .code-block .kw      { color: var(--blue); }
+    .code-block .str     { color: var(--gold); }
+
+    .copy-btn {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      background: var(--edge);
+      border: none;
+      color: var(--muted);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.65rem;
+      letter-spacing: 0.08em;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .copy-btn:hover { background: var(--blue); color: #fff; }
+
+    /* ── NOTE ── */
+    .step-note {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.8rem;
+      background: rgba(88,166,255,0.08);
+      border-left: 3px solid var(--blue);
+      padding: 0.5rem 0.75rem;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--blue);
+      border-radius: 0 4px 4px 0;
+      line-height: 1.55;
+    }
+
+    .step-note.warn {
+      background: rgba(227,179,65,0.08);
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+
+    /* ── ANIMATION ── */
+    @keyframes rise { to { opacity: 1; transform: translateY(0); } }
+
+    /* ── DISCLAIMER ── */
+    .disclaimer {
+      max-width: 720px;
+      margin: 0 auto 2.5rem;
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-start;
+      background: rgba(227,179,65,0.07);
+      border: 1px solid var(--gold);
+      border-radius: 6px;
+      padding: 0.9rem 1rem;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.74rem;
+      color: var(--gold);
+      line-height: 1.65;
+    }
+    .disclaimer-icon { font-size: 1rem; flex-shrink: 0; margin-top: 0.05rem; }
+
+    /* ── FOOTER ── */
+    .page-footer {
+      max-width: 720px;
+      margin: 3rem auto 0;
+      text-align: center;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.65rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--edge);
+    }
+  </style>
+</head>
+<body>
+<script>
+/* ════════════════════════════════════════════════════════════════
+   GUIDE DATA — edit this section to change the guide content
+   ════════════════════════════════════════════════════════════════ */
+
+const GUIDE = {
+  eyebrow:  "Technical Guide",
+  title:    "Self-Hosting Your HTML Page & AI",
+  subtitle: "How to host your own HTML button page locally or on the web, and minimum specs for running an 8B AI model.",
+
+  disclaimer: "⚠️ Disclaimer: This page is a game proxy — it loads an external game site inside your browser. It is intended for personal use only. Do not use it to bypass school, work, or network filters in violation of your institution's acceptable-use policy. By self-hosting this page you take full responsibility for how it is used. The author makes no guarantees about the content loaded from the external source.",
+
+  sections: [
+
+    /* ── SECTION 1 ── */
+    {
+      label: "Part 1 — Self-Hosting the HTML Page",
+      steps: [
+        {
+          heading: "Save the HTML file",
+          text: "Open any plain-text editor (Notepad on Windows, TextEdit on Mac, or VS Code). Paste the code below into a new file and save it as <code style='color:var(--gold);font-family:DM Mono,monospace;'>index.html</code>.",
+          code: `<!DOCTYPE html>
+<html>
+  <head><base target="_top"></head>
+  <body>
+    <button onclick='fetch("https://cdn.jsdelivr.net/gh/freebuisness/freebuisness.github.io@main/autoupdate.html?t="+Date.now())
+      .then(r => r.text())
+      .then(text => {
+        const w = window.open("about:blank","_blank");
+        if(w){ w.document.open(); w.document.write(text); w.document.close(); }
+      });'
+      style="width:100%;height:100%;font-size:100">
+      math homework
+    </button>
+  </body>
+</html>`,
+        },
+        {
+          heading: "Option A — Open it directly in your browser",
+          text: "The simplest option: just double-click <code style='color:var(--gold);font-family:DM Mono,monospace;'>index.html</code>. It will open in your browser as a local file. This works perfectly for personal use — no server needed.",
+          note: { type: "info", text: "Note: Some browsers block popups from local files. If the button doesn't open a new window, allow popups for this page in your browser settings." },
+        },
+        {
+          heading: "Option B — Serve it locally with Python",
+          text: "If you want it to behave like a real website on your computer (useful if you're making changes and testing), open a terminal in the folder where you saved the file and run:",
+          code: `# Python 3 (most computers)
+python -m http.server 8080
+
+# Then open your browser and go to:
+# http://localhost:8080`,
+          note: { type: "info", text: "Tip: Press Ctrl+C in the terminal to stop the server when you're done." },
+        },
+        {
+          heading: "Option C — Host it free on GitHub Pages",
+          text: "For a permanent public URL anyone can visit: (1) Create a free account at github.com. (2) Create a new repository named <code style='color:var(--gold);font-family:DM Mono,monospace;'>yourusername.github.io</code>. (3) Upload your <code style='color:var(--gold);font-family:DM Mono,monospace;'>index.html</code> file to it. (4) Go to Settings → Pages → set source to main branch. Your page will be live at <code style='color:var(--gold);font-family:DM Mono,monospace;'>https://yourusername.github.io</code> within a minute.",
+          note: { type: "info", text: "Tip: GitHub Pages is completely free for public repos and is the easiest permanent hosting option." },
+        },
+        {
+          heading: "Option D — Deploy to Netlify (drag & drop)",
+          text: "Go to netlify.com, sign up for free, and drag your <code style='color:var(--gold);font-family:DM Mono,monospace;'>index.html</code> file onto the deploy box on the dashboard. Netlify will give you a live URL instantly — no terminal, no git, nothing to install.",
+        },
+        {
+          heading: "Option E — Run it in StackBlitz (instant browser IDE)",
+          text: "StackBlitz lets you run and share HTML files entirely in the browser with no account required. Go to <strong style='color:var(--blue)'>stackblitz.com</strong>, click <em>Start a new project → HTML/JS</em>, then replace the contents of <code style='color:var(--gold);font-family:DM Mono,monospace;'>index.html</code> with your code. Hit the share button to get a live URL you can send to anyone.",
+          note: { type: "info", text: "Tip: StackBlitz projects are public by default on the free plan. Create a free account to keep your projects saved and private." },
+        },
+      ]
+    },
+
+    /* ── SECTION 2 ── */
+    {
+      label: "Part 2 — Minimum Specs for an 8B Model",
+      steps: [
+        {
+          heading: "Minimum system requirements",
+          text: "To run an 8-billion-parameter model (such as Llama 3.1 8B, Mistral 7B, or Gemma 2 9B) locally, your machine must meet the following minimums:",
+          code: `RAM      : 16 GB system RAM  (8 GB will work but expect slowdowns)
+VRAM     : 8 GB GPU VRAM    (NVIDIA RTX 3060 / AMD RX 6700 or better)
+           — OR run on CPU only with 16 GB RAM (much slower)
+Storage  : ~6–8 GB free disk space for the model file
+CPU      : Any modern 64-bit processor (4+ cores recommended)
+OS       : Windows 10/11, macOS 12+, or Ubuntu 20.04+`,
+          note: { type: "warn", text: "No GPU? You can still run the model using CPU-only mode, but responses will be slow (10–30 seconds per reply instead of near-instant)." },
+        },
+        {
+          heading: "Recommended specs for a smooth experience",
+          text: "For fast, comfortable responses without long waits, aim for these specs:",
+          code: `RAM      : 32 GB system RAM
+VRAM     : 12–16 GB GPU VRAM  (RTX 3080 / RTX 4070 / RX 7900 XT)
+Storage  : SSD with 10+ GB free  (NVMe preferred)
+CPU      : 8+ core modern processor`,
+          note: { type: "info", text: "Tip: NVIDIA GPUs have the best software support for local AI (CUDA). AMD GPUs work but setup can be trickier." },
+        },
+      ]
+    },
+
+    /* ── SECTION 3 ── */
+    {
+      label: "Part 3 — Running the LLM via Ollama",
+      steps: [
+        {
+          heading: "Install Ollama",
+          text: "Go to <strong style='color:var(--blue)'>ollama.com</strong> and download the installer for your OS (Windows, Mac, or Linux). Run it — Ollama installs as a background service and is ready immediately. No extra setup needed.",
+        },
+        {
+          heading: "Pull and run an 8B model",
+          text: "Open a terminal and run one of the commands below. The model downloads automatically on first run (~4–5 GB). After that it launches instantly from your local disk.",
+          code: `# Llama 3.1 8B — best all-rounder
+ollama run llama3.1:8b
+
+# Mistral 7B — fast and lightweight
+ollama run mistral
+
+# Gemma 2 9B — great reasoning
+ollama run gemma2:9b
+
+# List everything you've downloaded
+ollama list`,
+        },
+        {
+          heading: "Chat in the terminal",
+          text: "Once the model loads you'll get a prompt right in the terminal. Type your message and press Enter. Everything runs 100% locally — no internet needed after the download, and nothing leaves your machine. Type <code style='color:var(--gold);font-family:DM Mono,monospace;'>/bye</code> to exit.",
+          note: { type: "info", text: "Tip: Ollama also exposes a local REST API at http://localhost:11434 so you can connect other apps and UIs to it." },
+        },
+        {
+          heading: "Add a chat UI with Open WebUI",
+          text: "For a browser-based ChatGPT-style interface, install Open WebUI (requires Docker). It auto-detects your Ollama models.",
+          code: `docker run -d -p 3000:8080 \\
+  --add-host=host.docker.internal:host-gateway \\
+  -v open-webui:/app/backend/data \\
+  --name open-webui --restart always \\
+  ghcr.io/open-webui/open-webui:main
+
+# Open in browser:
+# http://localhost:3000`,
+          note: { type: "info", text: "Tip: Create a local account on first launch — nothing is sent to any server. All data stays on your machine." },
+        },
+      ]
+    },
+
+    /* ── SECTION 4 ── */
+    {
+      label: "Part 4 — Running the LLM via LM Studio",
+      steps: [
+        {
+          heading: "Download and install LM Studio",
+          text: "Go to <strong style='color:var(--blue)'>lmstudio.ai</strong> and download the installer for your OS. LM Studio is a desktop app with a full GUI — no terminal required at any point. Install it like any normal application.",
+        },
+        {
+          heading: "Search for and download a model",
+          text: "Open LM Studio and click the <em>Search</em> tab (magnifying glass icon on the left). Search for a model like <code style='color:var(--gold);font-family:DM Mono,monospace;'>llama-3.1-8b</code> or <code style='color:var(--gold);font-family:DM Mono,monospace;'>mistral-7b</code>. Click the model to expand it, choose a quantized variant (Q4_K_M is a great balance of size and quality), and hit Download.",
+          note: { type: "info", text: "Tip: Q4_K_M quantization cuts the model file roughly in half (to ~4–5 GB) with minimal quality loss — it's the recommended pick for most people." },
+        },
+        {
+          heading: "Load the model and start chatting",
+          text: "Go to the <em>Chat</em> tab, click the model selector at the top, and choose the model you downloaded. It will load into memory in a few seconds. Then just type in the chat box — it works exactly like ChatGPT, but fully offline on your own machine.",
+        },
+        {
+          heading: "Enable the local server (optional)",
+          text: "LM Studio has a built-in OpenAI-compatible local server, useful if you want other apps to connect to your model. Click the <em>Local Server</em> tab (plug icon), select your loaded model, and hit Start Server.",
+          code: `# Default server address once started:
+http://localhost:1234/v1
+
+# Compatible with any app that supports OpenAI's API —
+# just point the base URL to the address above.`,
+          note: { type: "info", text: "Tip: You can use this endpoint with tools like SillyTavern, Continue (VS Code), or your own scripts." },
+        },
+      ]
+    }
+
+  ]
+};
+
+/* ════════════════════════════════════════════════════════════════
+   RENDERER — no need to edit below this line
+   ════════════════════════════════════════════════════════════════ */
+
+function escapeHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function copyCode(btn) {
+  const pre = btn.parentElement;
+  const text = pre.innerText.replace('COPY','').trim();
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'COPIED';
+    setTimeout(() => btn.textContent = 'COPY', 1500);
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Header
+  const hdr = document.createElement('header');
+  hdr.className = 'page-header';
+  hdr.innerHTML = `
+    <div class="eyebrow">${GUIDE.eyebrow}</div>
+    <h1>${GUIDE.title}</h1>
+    ${GUIDE.subtitle ? `<p class="subtitle">${GUIDE.subtitle}</p>` : ''}
+  `;
+  document.body.appendChild(hdr);
+
+  // Disclaimer
+  if (GUIDE.disclaimer) {
+    const disc = document.createElement('div');
+    disc.className = 'disclaimer';
+    disc.innerHTML = `<span class="disclaimer-icon">⚠️</span><span>${GUIDE.disclaimer}</span>`;
+    document.body.appendChild(disc);
+  }
+
+  let delay = 0;
+
+  GUIDE.sections.forEach(section => {
+    // Section label
+    const lbl = document.createElement('div');
+    lbl.className = 'section-label';
+    lbl.innerHTML = `<span>${section.label}</span>`;
+    document.body.appendChild(lbl);
+
+    // Steps container
+    const stepsEl = document.createElement('div');
+    stepsEl.className = 'steps';
+
+    section.steps.forEach((step, i) => {
+      const el = document.createElement('div');
+      el.className = 'step';
+      el.style.animationDelay = `${delay}s`;
+      delay += 0.08;
+
+      let inner = `
+        <div class="step-num">${String(i + 1).padStart(2,'0')}</div>
+        <div class="step-body">
+          <div class="step-heading">${step.heading}</div>
+          <div class="step-text">${step.text}</div>
+      `;
+
+      if (step.code) {
+        inner += `<div class="code-block"><button class="copy-btn" onclick="copyCode(this)">COPY</button>${escapeHtml(step.code)}</div>`;
+      }
+
+      if (step.note) {
+        inner += `<div class="step-note ${step.note.type === 'warn' ? 'warn' : ''}">ℹ ${step.note.text}</div>`;
+      }
+
+      inner += `</div>`;
+      el.innerHTML = inner;
+      stepsEl.appendChild(el);
+    });
+
+    document.body.appendChild(stepsEl);
+  });
+
+  // Footer
+  const footer = document.createElement('footer');
+  footer.className = 'page-footer';
+  const total = GUIDE.sections.reduce((acc, s) => acc + s.steps.length, 0);
+  footer.textContent = `${total} steps across ${GUIDE.sections.length} sections`;
+  document.body.appendChild(footer);
+});
+</script>
+</body>
+</html>
