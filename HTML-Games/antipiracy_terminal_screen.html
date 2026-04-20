@@ -1,0 +1,194 @@
+
+<div style="background:#000;border-radius:8px;padding:0;overflow:hidden;min-height:500px;font-family:'Courier New',monospace;position:relative;" id="screen">
+
+<div id="boot-screen" style="padding:28px 32px;min-height:500px;box-sizing:border-box;">
+  <div style="color:#00c853;font-size:13px;line-height:1.8;" id="boot-log"></div>
+  <span id="cursor" style="display:inline-block;width:9px;height:14px;background:#00c853;vertical-align:middle;animation:blink 0.8s step-end infinite;"></span>
+</div>
+
+<div id="anti-piracy-screen" style="display:none;min-height:500px;box-sizing:border-box;position:relative;overflow:hidden;">
+  <div id="ap-bg" style="position:absolute;inset:0;background:#cc0000;"></div>
+  <div style="position:relative;z-index:2;padding:36px 32px;min-height:500px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;">
+    <div style="border:4px solid #fff;padding:32px 40px;max-width:560px;width:100%;position:relative;">
+      <div style="position:absolute;top:-18px;left:50%;transform:translateX(-50%);background:#cc0000;padding:0 16px;">
+        <span style="color:#fff;font-size:12px;font-weight:700;letter-spacing:3px;">WARNING</span>
+      </div>
+      <div style="font-size:48px;color:#fff;font-weight:900;letter-spacing:2px;margin-bottom:8px;animation:shake 0.1s infinite;">!</div>
+      <div style="color:#fff;font-size:22px;font-weight:700;letter-spacing:1px;margin-bottom:6px;">ANTI-PIRACY PROTECTION</div>
+      <div style="color:#ffcccc;font-size:12px;letter-spacing:2px;margin-bottom:28px;">ILLEGAL COPY DETECTED</div>
+      <div style="border-top:1px solid rgba(255,255,255,0.3);padding-top:20px;margin-bottom:20px;">
+        <div style="color:#fff;font-size:13px;line-height:2.0;" id="ap-text"></div>
+      </div>
+      <div style="background:rgba(0,0,0,0.35);padding:12px 16px;margin-bottom:20px;text-align:left;">
+        <div style="color:#ff9999;font-size:11px;letter-spacing:1px;margin-bottom:6px;">SYSTEM INFORMATION LOGGED:</div>
+        <div style="color:#ffdddd;font-size:11px;line-height:1.8;" id="sys-info"></div>
+      </div>
+      <div style="border:2px solid #fff;padding:10px;animation:border-flash 1s infinite;">
+        <span style="color:#fff;font-size:12px;letter-spacing:2px;">THIS SOFTWARE IS PROTECTED UNDER COPYRIGHT LAW</span>
+      </div>
+    </div>
+    <div style="margin-top:24px;color:rgba(255,255,255,0.6);font-size:11px;letter-spacing:1px;">
+      CASE ID: <span id="case-id" style="color:#fff;"></span>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<style>
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+@keyframes shake{0%{transform:translateX(0)}25%{transform:translateX(-3px)}75%{transform:translateX(3px)}100%{transform:translateX(0)}}
+@keyframes border-flash{0%,100%{border-color:#fff;color:#fff}50%{border-color:#ff6666;color:#ff6666}}
+@keyframes flash-red{0%{background:#000}50%{background:#cc0000}100%{background:#cc0000}}
+@keyframes scanline{0%{top:-10%}100%{top:110%}}
+</style>
+
+<script>
+const bootLines = [
+  {t:200,  txt:"BIOS v2.4.1  Copyright (C) 2024 QuantumTech Systems"},
+  {t:600,  txt:"Initializing hardware components..."},
+  {t:1100, txt:"RAM check: 32768 MB OK"},
+  {t:1500, txt:"Storage: NVMe SSD detected (1TB)"},
+  {t:1900, txt:""},
+  {t:2000, txt:"Loading BLOCKCRAFT ADVENTURES v3.7.2..."},
+  {t:2400, txt:"  > Unpacking game assets          [====        ] 42%"},
+  {t:2900, txt:"  > Unpacking game assets          [========    ] 73%"},
+  {t:3400, txt:"  > Unpacking game assets          [============] 100% OK"},
+  {t:3700, txt:"  > Loading world engine...        OK"},
+  {t:4000, txt:"  > Initializing chunk renderer... OK"},
+  {t:4300, txt:"  > Connecting to auth server..."},
+  {t:5000, txt:"  > Verifying license key..."},
+  {t:6200, txt:"  > Cross-referencing purchase ID..."},
+  {t:7000, txt:"  > LICENSE VALIDATION FAILED"},
+  {t:7200, txt:"CRITICAL: Unauthorized copy detected. Initiating protection protocol..."},
+];
+
+const apTextLines = [
+  "The copy of BLOCKCRAFT ADVENTURES you are",
+  "attempting to run has not been purchased",
+  "through an authorized retailer.",
+  "",
+  "Your system information has been recorded",
+  "and forwarded to our legal department.",
+];
+
+const sysInfoLines = [
+  "IP Address   : 192.168.xxx.xxx (masked)",
+  "MAC Address  : XX:XX:XX:XX:XX:XX (hashed)",
+  "Machine ID   : BC-" + Math.random().toString(36).substring(2,10).toUpperCase(),
+  "Timestamp    : " + new Date().toUTCString(),
+];
+
+const log = document.getElementById('boot-log');
+const cursor = document.getElementById('cursor');
+
+function typeLine(text, cb) {
+  if(text===""){
+    log.appendChild(document.createElement('br'));
+    if(cb) cb();
+    return;
+  }
+  const line = document.createElement('div');
+  log.appendChild(line);
+  let i = 0;
+  const speed = text.includes('FAILED') || text.includes('CRITICAL') ? 30 : 18;
+  const iv = setInterval(()=>{
+    line.textContent += text[i++];
+    if(i>=text.length){clearInterval(iv);if(cb)setTimeout(cb,80);}
+  }, speed);
+}
+
+function runBoot(idx){
+  if(idx>=bootLines.length){
+    triggerAntiPiracy();
+    return;
+  }
+  const entry = bootLines[idx];
+  const prevTime = idx>0?bootLines[idx-1].t:0;
+  const delay = entry.t - prevTime;
+  setTimeout(()=>{
+    if(entry.txt.includes('FAILED')){
+      const line = document.createElement('div');
+      line.style.color='#ff1744';
+      line.style.fontWeight='700';
+      log.appendChild(line);
+      let i=0;
+      const iv=setInterval(()=>{
+        line.textContent+=entry.txt[i++];
+        if(i>=entry.txt.length){clearInterval(iv);runBoot(idx+1);}
+      },30);
+    } else if(entry.txt.includes('CRITICAL')){
+      const line = document.createElement('div');
+      line.style.color='#ff6d00';
+      log.appendChild(line);
+      let i=0;
+      const iv=setInterval(()=>{
+        line.textContent+=entry.txt[i++];
+        if(i>=entry.txt.length){clearInterval(iv);runBoot(idx+1);}
+      },25);
+    } else {
+      typeLine(entry.txt, ()=>runBoot(idx+1));
+    }
+  }, delay);
+}
+
+function triggerAntiPiracy(){
+  cursor.style.display='none';
+  let flashes=0;
+  const flashScreen = document.getElementById('screen');
+  const iv=setInterval(()=>{
+    flashScreen.style.background = flashes%2===0?'#cc0000':'#000';
+    flashes++;
+    if(flashes>=8){
+      clearInterval(iv);
+      document.getElementById('boot-screen').style.display='none';
+      document.getElementById('anti-piracy-screen').style.display='block';
+      flashScreen.style.background='#000';
+      showAntiPiracy();
+    }
+  },120);
+}
+
+function showAntiPiracy(){
+  const apText = document.getElementById('ap-text');
+  const sysInfoEl = document.getElementById('sys-info');
+  document.getElementById('case-id').textContent = 'AP-' + Date.now().toString(36).toUpperCase();
+
+  let lineIdx=0;
+  function nextLine(){
+    if(lineIdx>=apTextLines.length){
+      setTimeout(showSysInfo,200);
+      return;
+    }
+    const txt=apTextLines[lineIdx++];
+    if(txt===""){apText.appendChild(document.createElement('br'));nextLine();return;}
+    const el=document.createElement('div');
+    apText.appendChild(el);
+    let i=0;
+    const iv=setInterval(()=>{
+      el.textContent+=txt[i++];
+      if(i>=txt.length){clearInterval(iv);setTimeout(nextLine,60);}
+    },22);
+  }
+
+  function showSysInfo(){
+    let i=0;
+    function nextSys(){
+      if(i>=sysInfoLines.length) return;
+      const el=document.createElement('div');
+      sysInfoEl.appendChild(el);
+      let ci=0;
+      const txt=sysInfoLines[i++];
+      const iv=setInterval(()=>{
+        el.textContent+=txt[ci++];
+        if(ci>=txt.length){clearInterval(iv);setTimeout(nextSys,80);}
+      },18);
+    }
+    nextSys();
+  }
+
+  nextLine();
+}
+
+runBoot(0);
+</script>

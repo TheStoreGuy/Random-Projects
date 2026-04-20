@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:#050505;
+  min-height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  font-family:'Courier New',Courier,monospace;
+  padding:16px;
+  position:relative;
+  overflow:hidden;
+}
+body::before{
+  content:"";
+  position:fixed;
+  top:0;left:0;width:100%;height:100%;
+  background:radial-gradient(ellipse at center,transparent 30%,rgba(0,0,0,0.92) 100%);
+  pointer-events:none;
+  z-index:1;
+}
+body::after{
+  content:"";
+  position:fixed;
+  top:0;left:0;width:100%;height:100%;
+  background:repeating-linear-gradient(0deg,rgba(0,0,0,0.22) 0px,rgba(255,255,255,0.025) 2px,transparent 3px,transparent 6px);
+  pointer-events:none;
+  z-index:2;
+  animation:scan 6s linear infinite;
+}
+@keyframes scan{0%{transform:translateY(0)}100%{transform:translateY(10px)}}
+.vhs{
+  width:100%;max-width:720px;
+  background:#0b0b0b;
+  border:3px solid #1f1f1f;
+  box-shadow:0 0 40px rgba(0,220,0,0.07),inset 0 0 30px #000,6px 0 0 rgba(255,0,0,0.06),-6px 0 0 rgba(0,0,255,0.06);
+  padding:24px 22px;
+  position:relative;
+  z-index:10;
+  color:#9eff9e;
+  font-size:0.92rem;
+  border-radius:12px 12px 24px 24px;
+  filter:drop-shadow(4px 0 2px rgba(255,0,0,0.1)) drop-shadow(-4px 0 2px rgba(0,0,255,0.1));
+}
+.vhs::before{
+  content:"";
+  position:absolute;
+  top:0;left:0;right:0;bottom:0;
+  background:repeating-linear-gradient(90deg,rgba(0,0,0,0.12) 0px,rgba(255,255,255,0.03) 1px,transparent 2px,transparent 5px);
+  pointer-events:none;
+  z-index:0;
+  border-radius:inherit;
+  animation:flicker 0.15s infinite;
+}
+@keyframes flicker{
+  0%{opacity:0.2;transform:translateX(0)}
+  25%{opacity:0.5;transform:translateX(-2px)}
+  50%{opacity:0.15;transform:translateX(2px)}
+  75%{opacity:0.55;transform:translateX(-1px)}
+  100%{opacity:0.2;transform:translateX(0)}
+}
+.glitch-bar{
+  position:absolute;left:0;width:100%;pointer-events:none;z-index:1;mix-blend-mode:screen;
+}
+.glitch-bar:nth-of-type(1){top:12%;height:4px;background:rgba(255,255,255,0.12);box-shadow:0 0 8px rgba(255,0,0,0.3);animation:gbar 4s 0s infinite}
+.glitch-bar:nth-of-type(2){top:44%;height:2px;background:rgba(0,255,255,0.15);animation:gbar 4s 1.4s infinite}
+.glitch-bar:nth-of-type(3){top:78%;height:5px;background:rgba(255,0,0,0.08);animation:gbar 4s 2.8s infinite}
+@keyframes gbar{0%{transform:translateY(-200%);opacity:0}6%{opacity:0.6}12%{transform:translateY(1200%);opacity:0}100%{transform:translateY(1200%);opacity:0}}
+.inner{position:relative;z-index:5}
+h2,h3{
+  font-weight:normal;
+  letter-spacing:4px;
+  text-transform:uppercase;
+  border-bottom:1px dashed #2e5a2e;
+  padding-bottom:8px;
+  margin-bottom:16px;
+  color:#b3ffb3;
+}
+.glitch-text{animation:tglitch 5s infinite}
+@keyframes tglitch{
+  0%,94%,100%{transform:skew(0);text-shadow:2px 0 rgba(255,0,0,0.5),-2px 0 rgba(0,0,255,0.5)}
+  95%{transform:skew(3deg,.4deg);text-shadow:-4px 0 cyan,4px 0 magenta;color:#fff}
+  96%{transform:skew(-3deg)}
+  97%{transform:skew(0)}
+}
+.box{
+  background:#060606;
+  border:2px solid #3a5a3a;
+  border-left:6px solid #5a4a2a;
+  padding:16px;
+  margin:12px 0;
+  line-height:1.6;
+  min-height:80px;
+}
+btn,button{
+  background:#111;
+  border:2px solid #2e5a2e;
+  color:#9eff9e;
+  font-family:inherit;
+  font-size:0.85rem;
+  padding:9px 14px;
+  margin:4px;
+  cursor:pointer;
+  text-transform:uppercase;
+  letter-spacing:2px;
+  box-shadow:3px 3px 0 #001200;
+  transition:0.1s;
+  border-radius:3px;
+  position:relative;z-index:5;
+}
+button:hover{background:#1a2a1a;border-color:#5a9e5a;box-shadow:1px 1px 0 #001200;transform:translate(2px,2px)}
+button:disabled{opacity:0.35;cursor:not-allowed;box-shadow:none;transform:none}
+.screen{display:none;flex-direction:column;gap:12px;position:relative;z-index:5}
+.active{display:flex}
+.vm-item{
+  background:#080808;
+  border:1px solid #2e5a2e;
+  padding:11px 14px;
+  cursor:pointer;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  transition:background 0.15s;
+  margin-bottom:6px;
+}
+.vm-item:hover{background:#122012}
+.vm-item.played{opacity:0.6}
+.clue-panel{
+  background:#0a130a;
+  border:1px dashed #4a7a4a;
+  padding:12px;
+  margin:8px 0;
+  font-size:0.82rem;
+}
+.keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:240px;margin:16px auto}
+.keypad button{padding:14px;font-size:1.3rem;letter-spacing:0}
+.digit-row{display:flex;justify-content:center;gap:8px;margin:14px 0}
+.digit{
+  width:56px;height:64px;
+  background:#050505;
+  border:2px solid #2e5a2e;
+  color:#9eff9e;
+  font-size:2.2rem;
+  text-align:center;
+  font-family:inherit;
+}
+.err{color:#ff5555;min-height:22px;margin:6px 0;text-align:center;font-size:0.85rem}
+.theory-area{
+  background:#060606;
+  border:1px solid #2e5a2e;
+  width:100%;
+  color:#9eff9e;
+  font-family:inherit;
+  font-size:0.85rem;
+  padding:10px;
+  resize:none;
+  margin-top:8px;
+  letter-spacing:1px;
+}
+.ai-response{
+  background:#060606;
+  border:2px solid #5a3a00;
+  border-left:6px solid #8a5a00;
+  padding:14px;
+  margin:10px 0;
+  color:#ffcc66;
+  line-height:1.6;
+  min-height:60px;
+  font-size:0.88rem;
+}
+.loader{
+  display:inline-block;
+  width:12px;height:12px;
+  border:2px solid #2e5a2e;
+  border-top-color:#9eff9e;
+  border-radius:50%;
+  animation:spin 0.7s linear infinite;
+  margin-right:8px;
+  vertical-align:middle;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.tag{font-size:0.72rem;letter-spacing:2px;color:#5a7a5a;margin-bottom:4px}
+#cursor{animation:blink 1s step-end infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.speedrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+input[type=range]{width:120px;accent-color:#5a9e5a}
+.progress-bar{
+  height:3px;
+  background:#1a2a1a;
+  margin:6px 0;
+  position:relative;
+}
+.progress-fill{
+  height:100%;
+  background:#5a9e5a;
+  transition:width 0.1s;
+}
+</style>
+</head>
+<body>
+<div class="vhs" id="vhs">
+  <div class="glitch-bar"></div>
+  <div class="glitch-bar"></div>
+  <div class="glitch-bar"></div>
+  <div class="inner">
+
+    <!-- MENU -->
+    <div id="s-menu" class="screen active">
+      <h2 class="glitch-text">📼 THE LAST VOICEMAIL</h2>
+      <div class="box" style="text-align:center;line-height:2">
+        <p>You found an old answering machine.</p>
+        <p>Three messages remain.</p>
+        <p style="color:#ff9999">They're all from her.</p>
+        <p style="margin-top:10px;font-size:0.78rem;color:#5a7a5a">[ A NEW MYSTERY GENERATES EACH TIME ]</p>
+      </div>
+      <button id="startBtn">▶ BEGIN TRANSMISSION</button>
+    </div>
+
+    <!-- GENERATING -->
+    <div id="s-gen" class="screen">
+      <h2>📡 RECEIVING SIGNAL</h2>
+      <div class="box" style="text-align:center;padding:30px">
+        <span class="loader"></span>
+        <span id="genStatus">Initializing mystery...</span>
+      </div>
+    </div>
+
+    <!-- VOICEMAILS -->
+    <div id="s-voicemail" class="screen">
+      <h3>📞 MESSAGES</h3>
+      <div id="vmList"></div>
+      <div id="playerPanel" style="display:none">
+        <div class="tag">PLAYING MESSAGE <span id="vmLabel"></span></div>
+        <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+        <div class="box" id="transcript"><span id="msgText"></span><span id="cursor">█</span></div>
+        <div class="speedrow" style="margin:8px 0">
+          <button id="ppBtn">▶ PLAY</button>
+          <button id="stopBtn">■ STOP</button>
+          <span style="font-size:0.78rem;color:#5a7a5a">SPEED</span>
+          <input type="range" id="speedSlider" min="0.5" max="3" step="0.1" value="1">
+          <span id="speedVal" style="font-size:0.78rem">1.0x</span>
+        </div>
+        <div class="clue-panel">
+          <strong>CLUES RECOVERED:</strong> <span id="clueCount">0 / 3</span>
+          <div id="clueList" style="margin-top:6px"></div>
+        </div>
+        <button id="backBtn">◀ BACK TO MESSAGES</button>
+      </div>
+    </div>
+
+    <!-- THEORY / INTERROGATE AI -->
+    <div id="s-theory" class="screen">
+      <h3 class="glitch-text">🔍 INTERROGATE THE SIGNAL</h3>
+      <div class="box" style="font-size:0.85rem;line-height:1.7">
+        <p>You've heard all three messages. Something doesn't add up.</p>
+        <p style="margin-top:8px;color:#ffcc66">Submit your theory. The signal will respond.</p>
+      </div>
+      <div class="tag" style="margin-top:4px">YOUR THEORY / QUESTION</div>
+      <textarea class="theory-area" id="theoryInput" rows="3" placeholder="What do you think happened to her..."></textarea>
+      <button id="submitTheoryBtn">⟶ TRANSMIT THEORY</button>
+      <div class="ai-response" id="theoryResponse" style="display:none"></div>
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+        <button id="anotherTheoryBtn" style="display:none">⟶ ANOTHER THEORY</button>
+        <button id="goToPuzzleBtn">↓ ENTER THE CODE</button>
+      </div>
+    </div>
+
+    <!-- PUZZLE -->
+    <div id="s-puzzle" class="screen">
+      <h2 class="glitch-text">🔐 THE CODE</h2>
+      <div class="box" style="text-align:center;font-size:0.85rem;line-height:1.8">
+        <p>The clues are inside the messages.</p>
+        <p>Piece them together.</p>
+        <p style="color:#ffcc66;margin-top:8px">Enter the 4-digit code.</p>
+      </div>
+      <div class="digit-row">
+        <input type="text" class="digit" id="d0" maxlength="1" readonly>
+        <input type="text" class="digit" id="d1" maxlength="1" readonly>
+        <input type="text" class="digit" id="d2" maxlength="1" readonly>
+        <input type="text" class="digit" id="d3" maxlength="1" readonly>
+      </div>
+      <div class="keypad" id="keypad">
+        <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
+        <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
+        <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
+        <button data-k="⌫">⌫</button><button data-k="0">0</button><button data-k="↵">↵</button>
+      </div>
+      <div class="err" id="codeErr"></div>
+      <button id="backToPuzzleBtn">◀ BACK TO MESSAGES</button>
+    </div>
+
+    <!-- FINAL -->
+    <div id="s-final" class="screen">
+      <h2 class="glitch-text">📡 END TRANSMISSION</h2>
+      <div class="ai-response" id="finalReveal" style="display:block;font-size:0.9rem;min-height:100px">
+        <span class="loader"></span> Decoding final message...
+      </div>
+      <button id="restartBtn" style="margin-top:12px">↺ REWIND &amp; RESTART</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+let mystery = null;
+let cluesFound = [];
+let currentVM = null;
+let isPlaying = false;
+let playInterval = null;
+let charIdx = 0;
+let speed = 1.0;
+let digits = ['','','',''];
+let digitPos = 0;
+
+const $ = id => document.getElementById(id);
+const screens = ['menu','gen','voicemail','theory','puzzle','final'];
+function show(name){
+  screens.forEach(s => {
+    const el = $('s-'+s);
+    if(el){ el.classList.toggle('active', s===name); }
+  });
+}
+
+async function callClaude(systemPrompt, userMsg, maxTok=800){
+  const res = await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      model:'claude-sonnet-4-20250514',
+      max_tokens: maxTok,
+      system: systemPrompt,
+      messages:[{role:'user',content:userMsg}]
+    })
+  });
+  const data = await res.json();
+  return data.content.map(b=>b.text||'').join('');
+}
+
+async function generateMystery(){
+  show('gen');
+  $('genStatus').textContent = 'Generating a new mystery...';
+  const sys = `You are a horror mystery writer. Generate a unique, eerie short mystery for a VHS voicemail game. 
+Respond ONLY with valid JSON, no markdown fences, no preamble. Format:
+{
+  "premise": "2-sentence setup for the mystery",
+  "code": "XXXX",
+  "voicemails": [
+    {"timestamp":"HH:MM AM/PM","transcript":"full message text (2-4 sentences, creepy, urgent). Embed a subtle clue about digit 1 of the code.","clue":"one short sentence stating the clue clearly"},
+    {"timestamp":"...","transcript":"...embed clue for digit 2...","clue":"..."},
+    {"timestamp":"...","transcript":"...embed clue for digit 3 and 4...","clue":"..."}
+  ]
+}
+Rules: code is exactly 4 digits. Each voicemail transcript must contain a hidden reference to its digit(s) in the clue. Each transcript is atmospheric, fragmented, fearful. Never use the same scenario twice. Make it fresh and unexpected.`;
+
+  const raw = await callClaude(sys, 'Generate a unique mystery now.');
+  try{
+    mystery = JSON.parse(raw.trim());
+  } catch(e){
+    const match = raw.match(/\{[\s\S]+\}/);
+    if(match) mystery = JSON.parse(match[0]);
+    else { $('genStatus').textContent = 'Signal lost. Retrying...'; return generateMystery(); }
+  }
+  mystery.voicemails.forEach((vm,i)=>{ vm.played=false; vm.id=i; });
+  cluesFound=[];
+  $('clueList').innerHTML='';
+  $('clueCount').textContent='0 / 3';
+  digits=['','','',''];
+  digitPos=0;
+  updateDigits();
+  renderVMList();
+  show('voicemail');
+}
+
+function renderVMList(){
+  const list = $('vmList');
+  list.innerHTML='';
+  mystery.voicemails.forEach((vm,i)=>{
+    const d=document.createElement('div');
+    d.className='vm-item'+(vm.played?' played':'');
+    d.innerHTML=`<span>📼 MESSAGE ${i+1} &nbsp;—&nbsp; ${vm.timestamp}</span><span style="font-size:0.78rem">${vm.played?'✓ PLAYED':'● NEW'}</span>`;
+    d.onclick=()=>openVM(i);
+    list.appendChild(d);
+  });
+}
+
+function openVM(i){
+  currentVM=i;
+  const vm=mystery.voicemails[i];
+  vm.played=true;
+  $('vmLabel').textContent=`${i+1} / 3`;
+  stopPlayback();
+  charIdx=0;
+  $('msgText').textContent='';
+  $('cursor').style.display='inline';
+  $('progressFill').style.width='0%';
+  $('playerPanel').style.display='block';
+  renderVMList();
+  startPlayback();
+}
+
+function startPlayback(){
+  if(currentVM===null) return;
+  isPlaying=true;
+  $('ppBtn').textContent='⏸ PAUSE';
+  playInterval=setInterval(typeChar, 40/speed);
+}
+function pausePlayback(){
+  isPlaying=false;
+  $('ppBtn').textContent='▶ PLAY';
+  clearInterval(playInterval);
+}
+function stopPlayback(){
+  pausePlayback();
+  charIdx=0;
+  if($('msgText')) $('msgText').textContent='';
+  $('progressFill').style.width='0%';
+}
+function togglePP(){ isPlaying ? pausePlayback() : startPlayback(); }
+
+function typeChar(){
+  const vm=mystery.voicemails[currentVM];
+  const full=vm.transcript;
+  if(charIdx<full.length){
+    $('msgText').textContent+=full[charIdx++];
+    $('progressFill').style.width=Math.round((charIdx/full.length)*100)+'%';
+  } else {
+    pausePlayback();
+    $('cursor').style.display='none';
+    $('progressFill').style.width='100%';
+    if(!cluesFound.includes(currentVM)){
+      cluesFound.push(currentVM);
+      $('clueCount').textContent=cluesFound.length+' / 3';
+      const cd=document.createElement('div');
+      cd.style.cssText='color:#ffcc66;margin-top:4px;font-size:0.8rem';
+      cd.textContent='🔍 '+vm.clue;
+      $('clueList').appendChild(cd);
+    }
+    if(cluesFound.length===3){
+      setTimeout(()=>show('theory'),600);
+    }
+  }
+}
+
+$('ppBtn').onclick=togglePP;
+$('stopBtn').onclick=stopPlayback;
+$('speedSlider').oninput=function(){
+  speed=parseFloat(this.value);
+  $('speedVal').textContent=speed.toFixed(1)+'x';
+  if(isPlaying){ clearInterval(playInterval); playInterval=setInterval(typeChar,40/speed); }
+};
+$('backBtn').onclick=()=>{ stopPlayback(); $('playerPanel').style.display='none'; renderVMList(); };
+$('startBtn').onclick=()=>generateMystery();
+
+async function submitTheory(){
+  const theory=$('theoryInput').value.trim();
+  if(!theory) return;
+  $('submitTheoryBtn').disabled=true;
+  const resp=$('theoryResponse');
+  resp.style.display='block';
+  resp.innerHTML='<span class="loader"></span> Signal processing...';
+  
+  const cluesText=mystery.voicemails.map((vm,i)=>`Message ${i+1}: "${vm.clue}"`).join('\n');
+  const sys=`You are a cryptic narrator for a horror mystery game. The player has heard 3 voicemails and is submitting a theory about what happened.
+The mystery: ${mystery.premise}
+The clues: ${cluesText}
+The secret code is: ${mystery.code}
+Respond in-character as a distorted signal/entity. 2-4 sentences. Be cryptic and atmospheric. Neither confirm nor deny fully. Hint at truth but remain eerie. Do NOT reveal the code.`;
+  
+  const reply=await callClaude(sys,`Player theory: "${theory}"`);
+  resp.innerHTML='';
+  let idx=0;
+  const ti=setInterval(()=>{
+    if(idx<reply.length){ resp.textContent+=reply[idx++]; }
+    else { clearInterval(ti); $('anotherTheoryBtn').style.display='inline'; $('submitTheoryBtn').disabled=false; }
+  },18);
+}
+
+$('submitTheoryBtn').onclick=submitTheory;
+$('anotherTheoryBtn').onclick=()=>{
+  $('theoryInput').value='';
+  $('theoryResponse').style.display='none';
+  $('anotherTheoryBtn').style.display='none';
+};
+$('goToPuzzleBtn').onclick=()=>show('puzzle');
+$('backToPuzzleBtn').onclick=()=>show('theory');
+
+function updateDigits(){
+  for(let i=0;i<4;i++){ const d=$('d'+i); if(d) d.value=digits[i]; }
+}
+
+document.querySelectorAll('[data-k]').forEach(btn=>{
+  btn.onclick=()=>{
+    const k=btn.dataset.k;
+    if(k==='⌫'){
+      if(digitPos>0){ digitPos--; digits[digitPos]=''; }
+      else digits[0]='';
+      $('codeErr').textContent='';
+      updateDigits();
+    } else if(k==='↵'){
+      if(digits.every(d=>d!=='')){
+        if(digits.join('')===mystery.code){
+          show('final');
+          revealEnding();
+        } else {
+          $('codeErr').textContent='INCORRECT CODE. TRY AGAIN.';
+          for(let i=0;i<4;i++) $('d'+i).style.borderColor='#ff5555';
+          setTimeout(()=>{ for(let i=0;i<4;i++) $('d'+i).style.borderColor='#2e5a2e'; },500);
+        }
+      } else {
+        $('codeErr').textContent='ENTER ALL 4 DIGITS.';
+      }
+    } else {
+      if(digitPos<4){ digits[digitPos++]=k; updateDigits(); $('codeErr').textContent=''; }
+    }
+  };
+});
+
+async function revealEnding(){
+  const sys=`You are the narrator of a horror mystery. The player just cracked the code and unlocked the final message.
+Mystery premise: ${mystery.premise}
+Code was: ${mystery.code}
+Write a final transmission: 4-6 sentences, eerie and haunting, revealing a partial truth but leaving some dread unresolved. Start with "Code accepted." End with something that implies the mystery is not truly over.`;
+  const reply=await callClaude(sys,'Generate the final reveal message now.');
+  const box=$('finalReveal');
+  box.innerHTML='';
+  let idx=0;
+  const ti=setInterval(()=>{
+    if(idx<reply.length){ box.textContent+=reply[idx++]; }
+    else clearInterval(ti);
+  },22);
+}
+
+$('restartBtn').onclick=()=>{ mystery=null; cluesFound=[]; currentVM=null; show('menu'); };
+
+})();
+</script>
+</body>
+</html>

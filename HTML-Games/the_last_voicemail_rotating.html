@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#050505;min-height:100vh;display:flex;justify-content:center;align-items:center;font-family:'Courier New',Courier,monospace;padding:16px;position:relative;overflow:hidden}
+body::before{content:"";position:fixed;top:0;left:0;width:100%;height:100%;background:radial-gradient(ellipse at center,transparent 30%,rgba(0,0,0,0.92) 100%);pointer-events:none;z-index:1}
+body::after{content:"";position:fixed;top:0;left:0;width:100%;height:100%;background:repeating-linear-gradient(0deg,rgba(0,0,0,0.22) 0px,rgba(255,255,255,0.025) 2px,transparent 3px,transparent 6px);pointer-events:none;z-index:2;animation:scan 6s linear infinite}
+@keyframes scan{0%{transform:translateY(0)}100%{transform:translateY(10px)}}
+.vhs{width:100%;max-width:720px;background:#0b0b0b;border:3px solid #1f1f1f;box-shadow:0 0 40px rgba(0,220,0,0.07),inset 0 0 30px #000,6px 0 0 rgba(255,0,0,0.06),-6px 0 0 rgba(0,0,255,0.06);padding:24px 22px;position:relative;z-index:10;color:#9eff9e;font-size:0.92rem;border-radius:12px 12px 24px 24px;filter:drop-shadow(4px 0 2px rgba(255,0,0,0.1)) drop-shadow(-4px 0 2px rgba(0,0,255,0.1))}
+.vhs::before{content:"";position:absolute;top:0;left:0;right:0;bottom:0;background:repeating-linear-gradient(90deg,rgba(0,0,0,0.12) 0px,rgba(255,255,255,0.03) 1px,transparent 2px,transparent 5px);pointer-events:none;z-index:0;border-radius:inherit;animation:flicker 0.15s infinite}
+@keyframes flicker{0%{opacity:0.2;transform:translateX(0)}25%{opacity:0.5;transform:translateX(-2px)}50%{opacity:0.15;transform:translateX(2px)}75%{opacity:0.55;transform:translateX(-1px)}100%{opacity:0.2;transform:translateX(0)}}
+.glitch-bar{position:absolute;left:0;width:100%;pointer-events:none;z-index:1;mix-blend-mode:screen}
+.glitch-bar:nth-of-type(1){top:12%;height:4px;background:rgba(255,255,255,0.12);box-shadow:0 0 8px rgba(255,0,0,0.3);animation:gbar 4s 0s infinite}
+.glitch-bar:nth-of-type(2){top:44%;height:2px;background:rgba(0,255,255,0.15);animation:gbar 4s 1.4s infinite}
+.glitch-bar:nth-of-type(3){top:78%;height:5px;background:rgba(255,0,0,0.08);animation:gbar 4s 2.8s infinite}
+@keyframes gbar{0%{transform:translateY(-200%);opacity:0}6%{opacity:0.6}12%{transform:translateY(1200%);opacity:0}100%{transform:translateY(1200%);opacity:0}}
+.inner{position:relative;z-index:5}
+h2,h3{font-weight:normal;letter-spacing:4px;text-transform:uppercase;border-bottom:1px dashed #2e5a2e;padding-bottom:8px;margin-bottom:16px;color:#b3ffb3}
+.glitch-text{animation:tglitch 5s infinite}
+@keyframes tglitch{0%,94%,100%{transform:skew(0);text-shadow:2px 0 rgba(255,0,0,0.5),-2px 0 rgba(0,0,255,0.5)}95%{transform:skew(3deg,.4deg);text-shadow:-4px 0 cyan,4px 0 magenta;color:#fff}96%{transform:skew(-3deg)}97%{transform:skew(0)}}
+.box{background:#060606;border:2px solid #3a5a3a;border-left:6px solid #5a4a2a;padding:16px;margin:12px 0;line-height:1.6;min-height:80px}
+button{background:#111;border:2px solid #2e5a2e;color:#9eff9e;font-family:inherit;font-size:0.85rem;padding:9px 14px;margin:4px;cursor:pointer;text-transform:uppercase;letter-spacing:2px;box-shadow:3px 3px 0 #001200;transition:0.1s;border-radius:3px;position:relative;z-index:5}
+button:hover{background:#1a2a1a;border-color:#5a9e5a;box-shadow:1px 1px 0 #001200;transform:translate(2px,2px)}
+button:disabled{opacity:0.35;cursor:not-allowed;box-shadow:none;transform:none}
+.screen{display:none;flex-direction:column;gap:12px;position:relative;z-index:5}
+.active{display:flex}
+.vm-item{background:#080808;border:1px solid #2e5a2e;padding:11px 14px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;transition:background 0.15s;margin-bottom:6px}
+.vm-item:hover{background:#122012}
+.vm-item.played{opacity:0.6}
+.clue-panel{background:#0a130a;border:1px dashed #4a7a4a;padding:12px;margin:8px 0;font-size:0.82rem}
+.keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:240px;margin:16px auto}
+.keypad button{padding:14px;font-size:1.3rem;letter-spacing:0}
+.digit-row{display:flex;justify-content:center;gap:8px;margin:14px 0}
+.digit{width:56px;height:64px;background:#050505;border:2px solid #2e5a2e;color:#9eff9e;font-size:2.2rem;text-align:center;font-family:inherit}
+.err{color:#ff5555;min-height:22px;margin:6px 0;text-align:center;font-size:0.85rem}
+.progress-bar{height:3px;background:#1a2a1a;margin:6px 0}
+.progress-fill{height:100%;background:#5a9e5a;transition:width 0.1s}
+.speedrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+input[type=range]{width:120px;accent-color:#5a9e5a}
+.tag{font-size:0.72rem;letter-spacing:2px;color:#5a7a5a;margin-bottom:4px}
+.badge{display:inline-block;font-size:0.7rem;letter-spacing:2px;padding:2px 8px;border:1px solid #5a4a2a;color:#c8a060;margin-bottom:8px}
+#cursor{animation:blink 1s step-end infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.round-indicator{font-size:0.72rem;letter-spacing:2px;color:#5a7a5a;text-align:right;margin-bottom:8px}
+</style>
+</head>
+<body>
+<div class="vhs">
+  <div class="glitch-bar"></div><div class="glitch-bar"></div><div class="glitch-bar"></div>
+  <div class="inner">
+
+    <!-- MENU -->
+    <div id="s-menu" class="screen active">
+      <h2 class="glitch-text">📼 THE LAST VOICEMAIL</h2>
+      <div class="round-indicator" id="roundLabel">TAPE 1 OF 6</div>
+      <div class="box" style="text-align:center;line-height:2.1">
+        <p>You found an old answering machine.</p>
+        <p>Three messages remain.</p>
+        <p style="color:#ff9999" id="menuSubtitle">They're all from her.</p>
+        <p style="margin-top:12px;font-size:0.78rem;color:#4a6a4a">[ SIX MYSTERIES. ONE PLAYS EACH ROUND. ]</p>
+      </div>
+      <button id="startBtn">▶ BEGIN TRANSMISSION</button>
+    </div>
+
+    <!-- VOICEMAILS -->
+    <div id="s-voicemail" class="screen">
+      <h3>📞 MESSAGES</h3>
+      <div class="badge" id="mysteryLabel">CASE #1 — UNKNOWN</div>
+      <div id="vmList"></div>
+      <div id="playerPanel" style="display:none">
+        <div class="tag">PLAYING MESSAGE <span id="vmLabel"></span></div>
+        <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+        <div class="box"><span id="msgText"></span><span id="cursor">█</span></div>
+        <div class="speedrow" style="margin:8px 0">
+          <button id="ppBtn">▶ PLAY</button>
+          <button id="stopBtn">■ STOP</button>
+          <span style="font-size:0.78rem;color:#5a7a5a">SPEED</span>
+          <input type="range" id="speedSlider" min="0.5" max="3" step="0.1" value="1">
+          <span id="speedVal" style="font-size:0.78rem">1.0x</span>
+        </div>
+        <div class="clue-panel">
+          <strong>CLUES RECOVERED:</strong> <span id="clueCount">0 / 3</span>
+          <div id="clueList" style="margin-top:6px"></div>
+        </div>
+        <button id="backBtn">◀ BACK TO MESSAGES</button>
+      </div>
+    </div>
+
+    <!-- PUZZLE -->
+    <div id="s-puzzle" class="screen">
+      <h2 class="glitch-text">🔐 THE CODE</h2>
+      <div class="box" style="font-size:0.85rem;line-height:1.9;text-align:center">
+        <p>The clues are hidden in the messages.</p>
+        <p style="color:#ffcc66;margin-top:6px">Enter the 4-digit code to unlock the truth.</p>
+      </div>
+      <div class="digit-row">
+        <input type="text" class="digit" id="d0" maxlength="1" readonly>
+        <input type="text" class="digit" id="d1" maxlength="1" readonly>
+        <input type="text" class="digit" id="d2" maxlength="1" readonly>
+        <input type="text" class="digit" id="d3" maxlength="1" readonly>
+      </div>
+      <div class="keypad">
+        <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
+        <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
+        <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
+        <button data-k="⌫">⌫</button><button data-k="0">0</button><button data-k="↵">↵</button>
+      </div>
+      <div class="err" id="codeErr"></div>
+      <button id="backToPuzzleBtn">◀ BACK TO MESSAGES</button>
+    </div>
+
+    <!-- FINAL -->
+    <div id="s-final" class="screen">
+      <h2 class="glitch-text">📡 END TRANSMISSION</h2>
+      <div class="box" id="finalBox" style="color:#ffcc66;line-height:1.8;font-size:0.9rem;border-left-color:#8a5a00"></div>
+      <div style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap">
+        <button id="nextBtn">▶ NEXT TAPE</button>
+        <button id="restartBtn">↺ REWIND ALL</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+// ─── MYSTERY POOL ───────────────────────────────────────────────────────────
+const MYSTERIES = [
+  {
+    id: 1,
+    title: "THE RIVER HOUSE",
+    subtitle: "They're all from her.",
+    code: "1947",
+    voicemails: [
+      {
+        timestamp: "02:14 AM",
+        transcript: "It's me. Please listen. I'm at the river house — the one where we used to count the fireflies. Remember? You always said there were nineteen. Nineteen windows. Nineteen steps down to the water. *static* ...the first number is one less than twenty. Please. Don't come alone.",
+        clue: "First digit: one less than twenty (19 → 1)."
+      },
+      {
+        timestamp: "02:58 AM",
+        transcript: "*wind noise* I found what he buried. It's in the floorboards — the ninth one from the door, but you have to count from the left side. *crackle* He knows I found it. The second number... count the floorboard. Nine. Exactly nine.",
+        clue: "Second digit: the ninth floorboard (9)."
+      },
+      {
+        timestamp: "03:31 AM",
+        transcript: "*whispering, hurried* There's a padlock on the cellar. The combination... we set it the year we moved in. Do you remember? It was the year my mother died. Nineteen forty-seven. The last two numbers... four and seven. *screech of wood* He's here. He's—",
+        clue: "Last two digits: the year they moved in (4, 7)."
+      }
+    ],
+    reveal: "The padlock opened. Inside the cellar: forty-seven photographs. All of you. None of her.\n\nShe was never at the river house.\n\nYou were.\n\n[END TRANSMISSION]"
+  },
+  {
+    id: 2,
+    title: "THE HOSPITAL CLOCK",
+    subtitle: "The calls came from Room 302.",
+    code: "0823",
+    voicemails: [
+      {
+        timestamp: "11:59 PM",
+        transcript: "I know you don't believe me. I know how it sounds. But the doctor told me this morning: zero chance. Those were his exact words. Zero. *long pause* ...write that down. The first number. Zero. Like me. Like what I have left.",
+        clue: "First digit: zero (the doctor's prognosis)."
+      },
+      {
+        timestamp: "12:44 AM",
+        transcript: "*monitors beeping* The nurse on shift — she's different. I counted eight times she walked past without looking in. Eight. *static* Something's wrong with her face. It's the same each time. Perfectly the same. Eight passes. Write it down.",
+        clue: "Second digit: eight (the nurse's passes)."
+      },
+      {
+        timestamp: "01:17 AM",
+        transcript: "I looked at the clock when the lights cut out. It was two... no. Two and three. 2:03 AM exactly. *shallow breathing* The clock stopped. It won't move. The last two numbers are two and three. Come before 2:03. Don't be late. Please don't be—",
+        clue: "Last two digits: the time the clock stopped (2, 3)."
+      }
+    ],
+    reveal: "Room 302 was empty when you arrived.\n\nThe bed was made. The monitors off. No record of any patient.\n\nThe clock on the wall read 2:03.\n\nIt was still ticking.\n\n[END TRANSMISSION]"
+  },
+  {
+    id: 3,
+    title: "THE LIGHTHOUSE",
+    subtitle: "The line was disconnected in 1986.",
+    code: "3516",
+    voicemails: [
+      {
+        timestamp: "04:05 AM",
+        transcript: "I climbed the stairs to the top. Thirty-five steps. I counted twice because my hands were shaking. *fog horn in distance* The door at the top has a lock. The first two numbers are the stairs. Thirty. Five. Please hurry. The fog is coming in.",
+        clue: "First two digits: the staircase count (3, 5)."
+      },
+      {
+        timestamp: "04:22 AM",
+        transcript: "*wind howling* There's a logbook up here. Last entry: January the first. New Year's Day. *pages turning* The keeper wrote one word and stopped. Just... one. The third number. January is month number one. Write it down.",
+        clue: "Third digit: January = month one (1)."
+      },
+      {
+        timestamp: "04:47 AM",
+        transcript: "I can see them in the water. Six of them. Standing. Just standing below the surface, looking up at the light. *voice breaks* They have no faces. Six of them. That's the last number. Six. I'm going to turn off the light now and see what happens. I love you. I—",
+        clue: "Fourth digit: six figures in the water (6)."
+      }
+    ],
+    reveal: "The lighthouse was decommissioned in 1986. No one had been inside for thirty-eight years.\n\nThe logbook's last entry was still wet.\n\nSix names. All yours.\n\n[END TRANSMISSION]"
+  },
+  {
+    id: 4,
+    title: "THE TWIN",
+    subtitle: "She left seven messages. Three remain.",
+    code: "7291",
+    voicemails: [
+      {
+        timestamp: "06:06 AM",
+        transcript: "You have to understand — we were seven when it happened. Both of us. Same age, same face. *long exhale* That's the first number. Seven. The age we were. The age I still am inside that house. Don't forget. Don't you forget it.",
+        clue: "First digit: seven (their age when it happened)."
+      },
+      {
+        timestamp: "06:33 AM",
+        transcript: "*child's music box playing faintly* She kept twenty-nine dolls. I counted them after the funeral. Every one had its eyes removed. Twenty-nine. *music box winds down* The second and third numbers. Two. Nine. She gave them all your name.",
+        clue: "Second and third digits: twenty-nine dolls (2, 9)."
+      },
+      {
+        timestamp: "07:01 AM",
+        transcript: "I'm in her room now. I've been sleeping here for one night and I already hear what she heard. The sound from the wall. *tapping, rhythmic* It taps once every hour. Always once. The last number is one. *tapping grows louder* It knows I'm here. It knows I—",
+        clue: "Fourth digit: one tap per hour (1)."
+      }
+    ],
+    reveal: "There was only ever one twin.\n\nEvery photograph confirms it.\n\nBut the room had two beds. Two sets of handprints on the wall.\n\nThe second set is fresh.\n\n[END TRANSMISSION]"
+  },
+  {
+    id: 5,
+    title: "THE ARCHIVE",
+    subtitle: "Filed under: MISSING — CASE CLOSED.",
+    code: "4038",
+    voicemails: [
+      {
+        timestamp: "10:10 PM",
+        transcript: "I found the filing cabinet. Drawer four. It was the only one unlocked. *rustling papers* Everything is in drawer four. The reports, the photographs, the name they didn't print. First number: four. Don't touch drawers one through three. Don't.",
+        clue: "First digit: drawer four (4)."
+      },
+      {
+        timestamp: "10:49 PM",
+        transcript: "The case number. I need to read it to you. Zero-zero-three... *static* ...I can't read the last digit. The paper's been burned. But the first three are zero, zero, three. Zero. Zero. Three. *drawer slams* Someone was just here. The chair is still warm.",
+        clue: "Second and third digits: case number prefix (0, 3)."
+      },
+      {
+        timestamp: "11:28 PM",
+        transcript: "*barely audible* There are eight of them. Eight files, all the same person. Different names, same photo. All closed. All wrong. Eight. *long silence* ...I think I'm one of them. I think I'm file number eight. Oh god. Oh— *line cuts*",
+        clue: "Fourth digit: eight files in the archive (8)."
+      }
+    ],
+    reveal: "Case 0038 was opened in 1994 and closed the same day.\n\nOfficer on record: your name.\n\nYou have no memory of 1994.\n\nFile nine is blank. The photo is of this room.\n\n[END TRANSMISSION]"
+  },
+  {
+    id: 6,
+    title: "THE LAST HOUSE",
+    subtitle: "The number has been disconnected.",
+    code: "5624",
+    voicemails: [
+      {
+        timestamp: "03:00 AM",
+        transcript: "We shouldn't have bought this house. I knew it on day five. Five days in and something was already wrong with the walls. *creak* They breathe. I counted. First number: five. The day I knew. The day it started watching us.",
+        clue: "First digit: five (the day things changed)."
+      },
+      {
+        timestamp: "03:18 AM",
+        transcript: "*children's laughter in background* There are six of them. I can hear six different voices but we only have two kids. Six voices through the ceiling, six sets of footsteps. *thud above* Second number is six. I haven't gone upstairs in a week.",
+        clue: "Second digit: six voices in the ceiling (6)."
+      },
+      {
+        timestamp: "03:44 AM",
+        transcript: "I looked at the deed. Previous owners — twenty-four of them. In eleven years. Twenty. Four. *shaking breath* Nobody stays. The last two numbers are two and four. I understand now why nobody stays. It's already too late for us, isn't it. *static forever*",
+        clue: "Last two digits: twenty-four previous owners (2, 4)."
+      }
+    ],
+    reveal: "The house has been on the market for eleven years.\n\nThere are no previous owners on record. The deed lists one name.\n\nYours. Since 1987.\n\nYou were born in 1991.\n\n[END TRANSMISSION]"
+  }
+];
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let order = [];
+let orderIdx = 0;
+let current = null;
+let cluesFound = [];
+let currentVM = null;
+let isPlaying = false;
+let playInterval = null;
+let charIdx = 0;
+let speed = 1.0;
+let digits = ['','','',''];
+let digitPos = 0;
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const SCREENS = ['menu','voicemail','puzzle','final'];
+function show(name){ SCREENS.forEach(s=>{ const el=$('s-'+s); if(el) el.classList.toggle('active',s===name); }); }
+
+function buildOrder(){
+  // Shuffle mystery indices, rotate through them
+  order = [...Array(MYSTERIES.length).keys()];
+  for(let i=order.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [order[i],order[j]]=[order[j],order[i]]; }
+  orderIdx=0;
+}
+
+function loadMystery(){
+  if(orderIdx>=order.length) orderIdx=0; // wrap around
+  current = MYSTERIES[order[orderIdx]];
+  orderIdx++;
+  cluesFound=[];
+  currentVM=null;
+  digits=['','','',''];
+  digitPos=0;
+  updateDigits();
+  $('clueList').innerHTML='';
+  $('clueCount').textContent='0 / 3';
+  $('codeErr').textContent='';
+  // Update labels
+  $('roundLabel').textContent=`TAPE ${orderIdx} OF ${MYSTERIES.length}`;
+  $('mysteryLabel').textContent=`CASE #${current.id} — ${current.title}`;
+  $('menuSubtitle').textContent=current.subtitle;
+  renderVMList();
+  show('voicemail');
+}
+
+function renderVMList(){
+  const list=$('vmList');
+  list.innerHTML='';
+  current.voicemails.forEach((vm,i)=>{
+    const d=document.createElement('div');
+    d.className='vm-item'+(vm.played?' played':'');
+    d.innerHTML=`<span>📼 MESSAGE ${i+1} &nbsp;—&nbsp; ${vm.timestamp}</span><span style="font-size:0.78rem">${vm.played?'✓ PLAYED':'● NEW'}</span>`;
+    d.onclick=()=>openVM(i);
+    list.appendChild(d);
+  });
+}
+
+function openVM(i){
+  currentVM=i;
+  const vm=current.voicemails[i];
+  vm.played=true;
+  $('vmLabel').textContent=`${i+1} / 3`;
+  stopPlayback();
+  charIdx=0;
+  $('msgText').textContent='';
+  $('cursor').style.display='inline';
+  $('progressFill').style.width='0%';
+  $('playerPanel').style.display='block';
+  renderVMList();
+  startPlayback();
+}
+
+function startPlayback(){
+  if(currentVM===null) return;
+  isPlaying=true;
+  $('ppBtn').textContent='⏸ PAUSE';
+  playInterval=setInterval(typeChar, 40/speed);
+}
+function pausePlayback(){
+  isPlaying=false;
+  $('ppBtn').textContent='▶ PLAY';
+  clearInterval(playInterval);
+}
+function stopPlayback(){
+  pausePlayback();
+  charIdx=0;
+  if($('msgText')) $('msgText').textContent='';
+  $('progressFill').style.width='0%';
+}
+
+function typeChar(){
+  const vm=current.voicemails[currentVM];
+  const full=vm.transcript;
+  if(charIdx<full.length){
+    $('msgText').textContent+=full[charIdx++];
+    $('progressFill').style.width=Math.round((charIdx/full.length)*100)+'%';
+  } else {
+    pausePlayback();
+    $('cursor').style.display='none';
+    $('progressFill').style.width='100%';
+    if(!cluesFound.includes(currentVM)){
+      cluesFound.push(currentVM);
+      $('clueCount').textContent=cluesFound.length+' / 3';
+      const cd=document.createElement('div');
+      cd.style.cssText='color:#ffcc66;margin-top:4px;font-size:0.8rem';
+      cd.textContent='🔍 '+vm.clue;
+      $('clueList').appendChild(cd);
+    }
+    if(cluesFound.length===3){
+      setTimeout(()=>show('puzzle'),700);
+    }
+  }
+}
+
+function updateDigits(){
+  for(let i=0;i<4;i++){ const d=$('d'+i); if(d) d.value=digits[i]; }
+}
+
+// ─── EVENTS ──────────────────────────────────────────────────────────────────
+$('startBtn').onclick=()=>{ buildOrder(); loadMystery(); };
+$('ppBtn').onclick=()=>{ isPlaying?pausePlayback():startPlayback(); };
+$('stopBtn').onclick=stopPlayback;
+$('speedSlider').oninput=function(){
+  speed=parseFloat(this.value);
+  $('speedVal').textContent=speed.toFixed(1)+'x';
+  if(isPlaying){ clearInterval(playInterval); playInterval=setInterval(typeChar,40/speed); }
+};
+$('backBtn').onclick=()=>{ stopPlayback(); $('playerPanel').style.display='none'; renderVMList(); };
+$('backToPuzzleBtn').onclick=()=>show('voicemail');
+$('restartBtn').onclick=()=>{ buildOrder(); $('roundLabel').textContent='TAPE 1 OF '+MYSTERIES.length; show('menu'); };
+$('nextBtn').onclick=()=>{
+  // Reset played flags on current mystery
+  current.voicemails.forEach(v=>v.played=false);
+  loadMystery();
+  show('menu');
+};
+
+document.querySelectorAll('[data-k]').forEach(btn=>{
+  btn.onclick=()=>{
+    const k=btn.dataset.k;
+    if(k==='⌫'){
+      if(digitPos>0){ digitPos--; digits[digitPos]=''; }
+      else digits[0]='';
+      $('codeErr').textContent='';
+      updateDigits();
+    } else if(k==='↵'){
+      if(digits.every(d=>d!=='')){
+        if(digits.join('')===current.code){
+          $('finalBox').textContent='';
+          show('final');
+          const txt=current.reveal;
+          let i=0;
+          const ti=setInterval(()=>{
+            if(i<txt.length) $('finalBox').textContent+=txt[i++];
+            else clearInterval(ti);
+          },22);
+        } else {
+          $('codeErr').textContent='INCORRECT CODE. TRY AGAIN.';
+          for(let j=0;j<4;j++) $('d'+j).style.borderColor='#ff5555';
+          setTimeout(()=>{ for(let j=0;j<4;j++) $('d'+j).style.borderColor='#2e5a2e'; },500);
+        }
+      } else {
+        $('codeErr').textContent='ENTER ALL 4 DIGITS.';
+      }
+    } else {
+      if(digitPos<4){ digits[digitPos++]=k; updateDigits(); $('codeErr').textContent=''; }
+    }
+  };
+});
+
+// Init round label on load
+$('roundLabel').textContent='TAPE 1 OF '+MYSTERIES.length;
+
+})();
+</script>
+</body>
+</html>

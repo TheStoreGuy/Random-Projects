@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>OPERATOR 13 // CALL CENTER</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --green:#b3ffb3;
+  --green-dim:#6bbb6b;
+  --green-dark:#3a6b3a;
+  --green-bg:#001a00;
+  --amber:#ffb347;
+  --red:#ff4444;
+  --scan-speed:8s;
+  --static-opacity:0.18;
+  --aberration:1;
+  --glitch-speed:4s;
+}
+
+html,body{height:100%;background:#050505}
+
+body{
+  min-height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  font-family:'Courier New',Courier,monospace;
+  padding:16px;
+  position:relative;
+  overflow:hidden;
+}
+
+/* CRT vignette */
+body::before{
+  content:"";position:fixed;inset:0;
+  background:radial-gradient(ellipse at center,transparent 30%,rgba(0,0,0,0.92) 100%);
+  pointer-events:none;z-index:900;
+}
+
+/* Scanline overlay */
+#scanlines{
+  position:fixed;inset:0;
+  background:repeating-linear-gradient(
+    0deg,
+    rgba(0,0,0,0.28) 0px,
+    rgba(255,255,255,0.025) 2px,
+    transparent 3px,
+    transparent 6px
+  );
+  pointer-events:none;z-index:901;
+  animation:scanRoll var(--scan-speed) linear infinite;
+}
+
+@keyframes scanRoll{0%{transform:translateY(0)}100%{transform:translateY(12px)}}
+
+/* Canvas static layer */
+#staticCanvas{
+  position:fixed;inset:0;
+  pointer-events:none;z-index:902;
+  opacity:var(--static-opacity);
+  mix-blend-mode:screen;
+}
+
+/* Main container */
+#gameContainer{
+  width:100%;max-width:820px;
+  min-height:580px;
+  background:#0b0b0b;
+  border:3px solid #222;
+  padding:28px 30px;
+  position:relative;z-index:10;
+  color:var(--green);
+  font-size:1.05rem;
+  border-radius:14px 14px 28px 28px;
+  overflow:hidden;
+  transition:filter 0.05s;
+  filter:
+    drop-shadow(calc(var(--aberration) * 3px) 0 0 rgba(255,0,0,0.2))
+    drop-shadow(calc(var(--aberration) * -3px) 0 0 rgba(0,80,255,0.2));
+}
+
+/* Tape-load transition overlay */
+#tapeLoad{
+  position:absolute;inset:0;background:#0b0b0b;
+  z-index:50;pointer-events:none;
+  transform:scaleY(0);transform-origin:top;
+  transition:transform 0.18s ease-in;
+}
+#tapeLoad.loading{transform:scaleY(1)}
+#tapeLoad.unloading{transform-origin:bottom;transition:transform 0.22s ease-out;transform:scaleY(0)}
+
+/* Horizontal VHS glitch bands */
+.glitch-band{
+  position:absolute;left:0;width:100%;pointer-events:none;z-index:20;
+  mix-blend-mode:screen;
+}
+.gb1{height:4px;background:rgba(255,255,255,0.12);top:18%;animation:gbMove 3.1s infinite}
+.gb2{height:2px;background:rgba(0,255,255,0.14);top:52%;animation:gbMove 4.7s infinite 1.3s}
+.gb3{height:6px;background:rgba(255,0,60,0.09);top:80%;animation:gbMove 5.2s infinite 2.6s}
+
+@keyframes gbMove{
+  0%{transform:translateY(-200%) skewX(0deg);opacity:0}
+  4%{opacity:1;transform:translateY(-200%) skewX(-2deg)}
+  9%{transform:translateY(600%) skewX(1deg);opacity:0}
+  100%{transform:translateY(600%);opacity:0}
+}
+
+/* Text glitch keyframes */
+@keyframes textGlitch{
+  0%,92%,100%{transform:skew(0deg);opacity:1;text-shadow:0 0 0 transparent}
+  93%{transform:skew(5deg,.5deg);opacity:.85;text-shadow:-4px 0 #f00,4px 0 #00f;letter-spacing:6px}
+  95%{transform:skew(-3deg,-.3deg);letter-spacing:3px}
+  97%{transform:skew(0deg);opacity:1}
+}
+
+.glitch-text{animation:textGlitch var(--glitch-speed) infinite}
+
+/* Screen system */
+.screen{display:none;flex-direction:column;gap:14px;position:relative;z-index:30}
+.active-screen{display:flex}
+
+/* Typography */
+h1,h2,h3{
+  font-weight:normal;letter-spacing:5px;text-transform:uppercase;
+  color:var(--green);border-bottom:1px dashed var(--green-dark);
+  padding-bottom:8px;margin-bottom:4px;
+}
+
+/* Dialogue box */
+.dialogue{
+  background:#090909;
+  border-left:5px solid #5a3a1a;
+  padding:18px 20px;
+  font-style:italic;
+  border-radius:0 6px 6px 0;
+  line-height:1.7;
+  position:relative;
+}
+.dialogue::before{
+  content:"▶";position:absolute;top:18px;left:-18px;
+  color:#5a3a1a;font-style:normal;font-size:0.75rem;
+}
+
+/* Buttons */
+button{
+  background:#111;
+  border:2px solid var(--green-dark);
+  color:var(--green);
+  font-family:inherit;font-size:0.95rem;
+  padding:11px 18px;margin:4px;
+  cursor:pointer;text-transform:uppercase;letter-spacing:2px;
+  box-shadow:3px 3px 0 var(--green-bg);
+  transition:all 0.08s ease;
+  border-radius:4px;
+}
+button:hover:not(:disabled){
+  background:#1e2e1e;border-color:#6bbb6b;
+  box-shadow:1px 1px 0 var(--green-bg);
+  transform:translate(2px,2px);
+}
+button:active:not(:disabled){transform:translate(3px,3px);box-shadow:none}
+button:disabled{opacity:.35;cursor:not-allowed}
+
+button.selected-btn{
+  background:#1a3a1a;border-color:var(--green);
+  box-shadow:0 0 10px rgba(0,255,0,0.2);
+}
+button.wrong-btn{
+  border-color:var(--red);color:var(--red);
+  animation:shake 0.3s ease;
+}
+button.correct-btn{
+  border-color:#00ff00;color:#00ff00;
+  box-shadow:0 0 15px rgba(0,255,0,0.3);
+}
+
+@keyframes shake{
+  0%,100%{transform:translateX(0)}
+  20%{transform:translateX(-6px)}
+  60%{transform:translateX(6px)}
+  80%{transform:translateX(-3px)}
+}
+
+/* Creature grid */
+.creature-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:8px;margin:8px 0;
+}
+
+/* Status bar */
+.status-bar{
+  display:flex;justify-content:space-between;align-items:center;
+  font-size:0.85rem;border-top:1px solid var(--green-dark);
+  padding-top:10px;margin-top:6px;color:var(--green-dim);
+}
+
+/* Flash feedback */
+@keyframes flashGreen{
+  0%{box-shadow:inset 0 0 0 transparent}
+  40%{box-shadow:inset 0 0 50px rgba(0,255,0,0.25),0 0 40px rgba(0,255,0,0.15)}
+  100%{box-shadow:inset 0 0 0 transparent}
+}
+@keyframes flashRed{
+  0%{box-shadow:inset 0 0 0 transparent}
+  40%{box-shadow:inset 0 0 50px rgba(255,0,0,0.2),0 0 40px rgba(255,0,0,0.12)}
+  100%{box-shadow:inset 0 0 0 transparent}
+}
+.flash-green{animation:flashGreen 0.5s ease}
+.flash-red{animation:flashRed 0.5s ease}
+
+/* Settings rows */
+.setting-row{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:10px 0;border-bottom:1px solid #1a1a1a;
+  gap:12px;flex-wrap:wrap;
+}
+.setting-label{font-size:0.9rem;color:var(--green-dim);letter-spacing:2px;text-transform:uppercase}
+.btn-group{display:flex;gap:4px;flex-wrap:wrap}
+.btn-group button{padding:7px 12px;font-size:0.8rem;margin:0}
+.btn-group button.active-setting{
+  background:#1a3a1a;border-color:var(--green);color:var(--green);
+}
+
+/* Badge */
+.badge{
+  display:inline-block;padding:3px 10px;font-size:0.75rem;
+  border:1px solid;border-radius:3px;margin-left:8px;
+}
+.badge-amber{color:var(--amber);border-color:var(--amber)}
+.badge-red{color:var(--red);border-color:var(--red)}
+.badge-green{color:#00ff00;border-color:#00ff00}
+
+/* Final screen specs */
+#final-specs{
+  background:#050505;padding:14px;font-size:0.85rem;
+  max-height:280px;overflow-y:auto;
+  border:1px solid #3a2a1a;border-radius:4px;
+  line-height:1.9;
+}
+#final-specs li{list-style:none;padding:2px 0;border-bottom:1px solid #111}
+
+/* Camera preview */
+.camera-preview{
+  width:100%;max-width:180px;border:2px solid var(--green-dark);
+  margin:6px 0;image-rendering:pixelated;
+}
+
+/* REC blink */
+@keyframes recBlink{0%,100%{opacity:1}50%{opacity:0.2}}
+#recIndicator{animation:recBlink 1.2s infinite;color:var(--red)}
+
+/* Tape counter */
+#tapeCounter{
+  font-size:0.75rem;color:#444;letter-spacing:3px;
+  text-align:right;margin-bottom:-8px;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:#050505}
+::-webkit-scrollbar-thumb{background:#3a6b3a}
+</style>
+</head>
+<body>
+
+<div id="scanlines"></div>
+<canvas id="staticCanvas"></canvas>
+
+<div id="gameContainer">
+  <div class="glitch-band gb1"></div>
+  <div class="glitch-band gb2"></div>
+  <div class="glitch-band gb3"></div>
+  <div id="tapeLoad"></div>
+
+  <!-- TAPE COUNTER -->
+  <div id="tapeCounter">▶ VHS-C // SP // 00:00:00</div>
+
+  <!-- ═══════════════════════════════════════════
+       SCREEN 1: CONSENT
+  ════════════════════════════════════════════ -->
+  <div id="consentScreen" class="screen active-screen">
+    <h2>⚠ SYSTEM NOTICE ⚠</h2>
+    <div class="dialogue">
+      <p style="margin-bottom:10px;color:var(--amber);font-style:normal;letter-spacing:2px;">
+        BEFORE YOU PROCEED — READ CAREFULLY
+      </p>
+      <p>This program may request the following from your device:</p>
+      <ul style="margin:12px 0 12px 22px;line-height:2.1">
+        <li>📍 <strong>Geolocation</strong> — your approximate coordinates will be shown to you</li>
+        <li>🎤 <strong>Microphone</strong> — voice fragments may be captured between calls</li>
+        <li>📷 <strong>Camera</strong> — a single still frame may be taken at shift end</li>
+        <li>💻 <strong>Device fingerprint</strong> — hardware and browser metadata will be displayed</li>
+      </ul>
+      <p style="color:#888;font-size:0.85rem;">
+        Nothing is transmitted or stored. All collected data is displayed only to you, only at the end.
+        It is part of the narrative. You may deny all permissions by selecting SAFE MODE below.
+      </p>
+    </div>
+    <p style="font-size:0.8rem;color:#555;border-left:3px solid #222;padding-left:10px;">
+      "What you allow in is what gets through."<br>— Night Operations Manual, Vol. 3
+    </p>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:4px">
+      <button id="consentYes">◈ GRANT ACCESS — BEGIN</button>
+      <button id="consentNo">▷ SAFE MODE — NO PERMISSIONS</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       SCREEN 2: START MENU
+  ════════════════════════════════════════════ -->
+  <div id="startMenuScreen" class="screen">
+    <h2 class="glitch-text">📞 OPERATOR 13</h2>
+    <div class="dialogue" style="text-align:center">
+      <p style="letter-spacing:3px;margin-bottom:8px">YOU ARE THE NEW NIGHT OPERATOR.</p>
+      <p style="color:#888;font-size:0.9rem">5 calls. 10 entities. Misidentify 3 and something finds your frequency.</p>
+      <p id="safeModeIndicator" style="display:none;margin-top:10px">
+        <span class="badge badge-amber">SAFE MODE</span>
+        <span style="font-size:0.8rem;color:#888"> — no device data will be collected</span>
+      </p>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button id="startGameBtn">▶ START SHIFT</button>
+      <button id="settingsBtn">⚙ SETTINGS</button>
+    </div>
+    <div style="font-size:0.78rem;color:#333;border-top:1px solid #1a1a1a;padding-top:10px;margin-top:6px">
+      [ SIGNAL DEGRADED // VHS-C FEED // SECTOR 13 ]
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       SCREEN 3: SETTINGS
+  ════════════════════════════════════════════ -->
+  <div id="settingsScreen" class="screen">
+    <h2>⚙ SETTINGS</h2>
+
+    <div class="setting-row">
+      <span class="setting-label">Static Intensity</span>
+      <div class="btn-group" id="sgStatic">
+        <button data-val="0" onclick="setSetting('static','0',this)">OFF</button>
+        <button data-val="0.08" onclick="setSetting('static','0.08',this)">LOW</button>
+        <button data-val="0.18" onclick="setSetting('static','0.18',this)" class="active-setting">MID</button>
+        <button data-val="0.34" onclick="setSetting('static','0.34',this)">HIGH</button>
+        <button data-val="0.55" onclick="setSetting('static','0.55',this)">MAX</button>
+      </div>
+    </div>
+
+    <div class="setting-row">
+      <span class="setting-label">Scanline Speed</span>
+      <div class="btn-group" id="sgScan">
+        <button data-val="20s" onclick="setSetting('scan','20s',this)">SLOW</button>
+        <button data-val="8s" onclick="setSetting('scan','8s',this)" class="active-setting">NORMAL</button>
+        <button data-val="3s" onclick="setSetting('scan','3s',this)">FAST</button>
+        <button data-val="0.8s" onclick="setSetting('scan','0.8s',this)">SEIZURE</button>
+      </div>
+    </div>
+
+    <div class="setting-row">
+      <span class="setting-label">Color Aberration</span>
+      <div class="btn-group" id="sgAberr">
+        <button data-val="0" onclick="setSetting('aberr','0',this)">OFF</button>
+        <button data-val="1" onclick="setSetting('aberr','1',this)" class="active-setting">NORMAL</button>
+        <button data-val="2.5" onclick="setSetting('aberr','2.5',this)">HEAVY</button>
+      </div>
+    </div>
+
+    <div class="setting-row">
+      <span class="setting-label">Glitch Text Speed</span>
+      <div class="btn-group" id="sgGlitch">
+        <button data-val="10s" onclick="setSetting('glitch','10s',this)">RARE</button>
+        <button data-val="4s" onclick="setSetting('glitch','4s',this)" class="active-setting">NORMAL</button>
+        <button data-val="1.5s" onclick="setSetting('glitch','1.5s',this)">FREQUENT</button>
+      </div>
+    </div>
+
+    <div class="setting-row">
+      <span class="setting-label">Difficulty</span>
+      <div class="btn-group" id="sgDiff">
+        <button data-val="5" onclick="setSetting('diff','5',this)">EASY <span style="font-size:0.7rem;opacity:.6">(5 wrong)</span></button>
+        <button data-val="3" onclick="setSetting('diff','3',this)" class="active-setting">NORMAL <span style="font-size:0.7rem;opacity:.6">(3 wrong)</span></button>
+        <button data-val="1" onclick="setSetting('diff','1',this)">HARD <span style="font-size:0.7rem;opacity:.6">(1 wrong)</span></button>
+      </div>
+    </div>
+
+    <div class="setting-row">
+      <span class="setting-label">Show Answer on Miss</span>
+      <div class="btn-group" id="sgReveal">
+        <button data-val="1" onclick="setSetting('reveal','1',this)" class="active-setting">YES</button>
+        <button data-val="0" onclick="setSetting('reveal','0',this)">NO</button>
+      </div>
+    </div>
+
+    <button id="settingsBackBtn" style="margin-top:12px">◀ BACK TO MENU</button>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       SCREEN 4: GAMEPLAY
+  ════════════════════════════════════════════ -->
+  <div id="gameplayScreen" class="screen">
+    <h3>INCOMING CALL — <span id="callNumber">1/5</span></h3>
+    <div id="callerText" class="dialogue">Loading transcript...</div>
+    <div style="font-size:0.8rem;letter-spacing:3px;color:var(--green-dim);margin:4px 0 2px">IDENTIFY ENTITY ↓</div>
+    <div id="creatureButtons" class="creature-grid"></div>
+    <div id="feedbackMsg" style="min-height:22px;font-size:0.85rem;color:#888;letter-spacing:1px;padding:4px 0"></div>
+    <div class="status-bar">
+      <span>ERRORS: <span id="wrongCounter">0</span>/<span id="maxWrong">3</span></span>
+      <span id="recIndicator" style="display:none"><span id="recIndicator">🔴 <span id="recText">REC ●</span></span></span>
+      <span id="callTimer" style="color:#444">00:00</span>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       SCREEN 5: FINAL / ENTITY REVEAL
+  ════════════════════════════════════════════ -->
+  <div id="finalScreen" class="screen">
+    <h2 class="glitch-text">📡 INCOMING TRANSMISSION</h2>
+    <div class="dialogue" style="border-left-color:#aa2200">
+      <p style="color:var(--red);font-style:normal;letter-spacing:3px;margin-bottom:8px">FREQUENCY ACQUIRED</p>
+      <p>Too many misidentifications. The signal found a gap.</p>
+      <p style="margin-top:8px;color:#888;font-size:0.85rem">
+        Operator <strong style="color:var(--green)" id="operatorId">13</strong> — what follows is everything we have on you.
+      </p>
+    </div>
+    <div id="final-specs"></div>
+    <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">
+      <button id="restartBtnFinal">↺ NEW OPERATOR</button>
+      <button id="settingsFromFinalBtn">⚙ SETTINGS</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       SCREEN 6: SURVIVE / CLEAR
+  ════════════════════════════════════════════ -->
+  <div id="surviveScreen" class="screen">
+    <h2>SHIFT COMPLETE</h2>
+    <div class="dialogue">
+      <p>You identified all five callers.</p>
+      <p style="margin-top:10px;color:#888">
+        The static retreats. For now.<br>
+        <span style="font-size:0.85rem">Errors logged: <strong id="surviveMistakes" style="color:var(--amber)">0</strong></span>
+      </p>
+    </div>
+    <p id="surviveRating" style="font-size:0.9rem;letter-spacing:2px;color:var(--green-dim)"></p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button id="restartSurviveBtn">↺ NEW OPERATOR</button>
+      <button id="settingsFromSurviveBtn">⚙ SETTINGS</button>
+    </div>
+  </div>
+
+</div><!-- /gameContainer -->
+
+<script>
+(function(){"use strict";
+
+/* ─── SETTINGS STATE ─────────────────────────────────── */
+const cfg = {
+  staticOpacity: 0.18,
+  scanSpeed: '8s',
+  aberration: 1,
+  glitchSpeed: '4s',
+  maxWrong: 3,
+  showReveal: true,
+};
+
+function applySettings(){
+  const r = document.documentElement.style;
+  r.setProperty('--static-opacity', cfg.staticOpacity);
+  r.setProperty('--scan-speed', cfg.scanSpeed);
+  r.setProperty('--aberration', cfg.aberration);
+  r.setProperty('--glitch-speed', cfg.glitchSpeed);
+  document.getElementById('maxWrong').textContent = cfg.maxWrong;
+}
+
+window.setSetting = function(type, val, btn){
+  const groupMap = {static:'sgStatic',scan:'sgScan',aberr:'sgAberr',glitch:'sgGlitch',diff:'sgDiff',reveal:'sgReveal'};
+  const grp = document.getElementById(groupMap[type]);
+  if(grp) grp.querySelectorAll('button').forEach(b=>b.classList.remove('active-setting'));
+  btn.classList.add('active-setting');
+
+  if(type==='static') cfg.staticOpacity = parseFloat(val);
+  if(type==='scan')   cfg.scanSpeed = val;
+  if(type==='aberr')  cfg.aberration = parseFloat(val);
+  if(type==='glitch') cfg.glitchSpeed = val;
+  if(type==='diff')   cfg.maxWrong = parseInt(val);
+  if(type==='reveal') cfg.showReveal = val==='1';
+  applySettings();
+};
+
+/* ─── STATIC CANVAS ENGINE ───────────────────────────── */
+const canvas = document.getElementById('staticCanvas');
+const ctx = canvas.getContext('2d');
+let staticFrame;
+
+function resizeCanvas(){
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+function drawStatic(){
+  if(cfg.staticOpacity === 0){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    staticFrame = requestAnimationFrame(drawStatic);
+    return;
+  }
+  const w = canvas.width, h = canvas.height;
+  const imageData = ctx.createImageData(w, h);
+  const data = imageData.data;
+
+  // Random pixel noise with occasional bright horizontal bands (VHS artifact)
+  const bandY = Math.random() < 0.04 ? Math.floor(Math.random() * h) : -1;
+  const bandH = 2 + Math.floor(Math.random() * 6);
+
+  for(let i = 0; i < data.length; i += 4){
+    const pixelIndex = i / 4;
+    const y = Math.floor(pixelIndex / w);
+    const inBand = y >= bandY && y < bandY + bandH;
+    const v = inBand ? 180 + Math.random() * 75 : Math.random() * 200;
+    data[i] = v; data[i+1] = v; data[i+2] = v;
+    data[i+3] = inBand ? 160 : Math.floor(Math.random() * 80);
+  }
+  ctx.putImageData(imageData, 0, 0);
+
+  // Occasional full-width color bar glitch
+  if(Math.random() < 0.015){
+    const gy = Math.floor(Math.random() * h);
+    ctx.fillStyle = `hsla(${Math.random()*360},100%,60%,0.06)`;
+    ctx.fillRect(0, gy, w, 1 + Math.floor(Math.random()*3));
+  }
+
+  staticFrame = requestAnimationFrame(drawStatic);
+}
+drawStatic();
+
+/* ─── TAPE COUNTER ───────────────────────────────────── */
+let tapeSeconds = 0, tapeInterval;
+function startTapeCounter(){
+  clearInterval(tapeInterval);
+  tapeInterval = setInterval(()=>{
+    tapeSeconds++;
+    const h = String(Math.floor(tapeSeconds/3600)).padStart(2,'0');
+    const m = String(Math.floor((tapeSeconds%3600)/60)).padStart(2,'0');
+    const s = String(tapeSeconds%60).padStart(2,'0');
+    document.getElementById('tapeCounter').textContent = `▶ VHS-C // SP // ${h}:${m}:${s}`;
+  }, 1000);
+}
+startTapeCounter();
+
+/* ─── CALL TIMER ─────────────────────────────────────── */
+let callSeconds = 0, callTimerInterval;
+function startCallTimer(){
+  callSeconds = 0;
+  clearInterval(callTimerInterval);
+  callTimerInterval = setInterval(()=>{
+    callSeconds++;
+    const m = String(Math.floor(callSeconds/60)).padStart(2,'0');
+    const s = String(callSeconds%60).padStart(2,'0');
+    document.getElementById('callTimer').textContent = m+':'+s;
+  }, 1000);
+}
+function stopCallTimer(){ clearInterval(callTimerInterval); }
+
+/* ─── GAME DATA ──────────────────────────────────────── */
+const CREATURES = [
+  "SHADOW PERSON","WENDIGO","BANSHEE","POLTERGEIST","DOPPELGÄNGER",
+  "SKINWALKER","MOTHMAN","KAPPA","CHUPACABRA","YUREI"
+];
+
+const CALLERS = [
+  {
+    text:`"It stands in the corner. Tall — taller than any person should be — and darker than the dark around it. No face, no features. Just a silhouette that breathes. Every night at 3:33 AM. Always the same corner. Last night it turned its head."`,
+    correctIndex:0
+  },
+  {
+    text:`"I was hiking the northern trail, alone. Something in the tree line — emaciated, with antlers, wrong proportions. Then it spoke. Used my brother's voice, perfectly. Said my name. I ran. It kept pace with me for almost a mile."`,
+    correctIndex:1
+  },
+  {
+    text:`"My grandmother heard a wailing outside the house three nights ago. High, sustained, like a woman in grief. She made us all stay inside. Our neighbor died the next morning. No one had seen her sick. What was that sound?"`,
+    correctIndex:2
+  },
+  {
+    text:`"Things move in my apartment. Not violently — deliberately. Chairs pulled out from the table. Books placed face-down. Three knocks from inside the walls, always in sets of three. I've checked every room. Nothing. No one."`,
+    correctIndex:3
+  },
+  {
+    text:`"I saw myself. Standing across the street, wearing what I wore yesterday, watching my building. My face. My posture. It raised one hand when I looked at it. My roommate saw it too. It was there for forty minutes before it walked away."`,
+    correctIndex:4
+  }
+];
+
+/* ─── PERMISSIONS / STATE ────────────────────────────── */
+const state = {
+  safeMode:false,
+  perm:{ geo:false, mic:false, cam:false, geoData:null, micStream:null, recognition:null, transcript:'', camGranted:false },
+  callIndex:0, wrongCount:0, gameActive:false,
+};
+
+/* ─── SCREEN MANAGEMENT ─────────────────────────────── */
+const SCREENS = {
+  consent:    document.getElementById('consentScreen'),
+  startMenu:  document.getElementById('startMenuScreen'),
+  settings:   document.getElementById('settingsScreen'),
+  gameplay:   document.getElementById('gameplayScreen'),
+  final:      document.getElementById('finalScreen'),
+  survive:    document.getElementById('surviveScreen'),
+};
+
+function showScreen(id){
+  const tl = document.getElementById('tapeLoad');
+  tl.className = 'loading';
+  setTimeout(()=>{
+    Object.values(SCREENS).forEach(s=>s.classList.remove('active-screen'));
+    SCREENS[id].classList.add('active-screen');
+    tl.className = 'unloading';
+    setTimeout(()=>tl.className='', 300);
+  }, 200);
+}
+
+/* ─── CONSENT ────────────────────────────────────────── */
+document.getElementById('consentYes').onclick = async function(){
+  state.safeMode = false;
+  showScreen('startMenu');
+  document.getElementById('safeModeIndicator').style.display = 'none';
+
+  // Geo
+  try{
+    const pos = await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej,{timeout:8000}));
+    state.perm.geo = true;
+    state.perm.geoData = {lat:pos.coords.latitude, lng:pos.coords.longitude, acc:pos.coords.accuracy};
+  }catch(e){}
+
+  // Mic
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+    state.perm.mic = true; state.perm.micStream = stream;
+    initSpeech();
+  }catch(e){}
+
+  // Camera
+  try{
+    const cs = await navigator.mediaDevices.getUserMedia({video:{width:320,height:240}});
+    state.perm.camGranted = true;
+    cs.getTracks().forEach(t=>t.stop());
+  }catch(e){}
+};
+
+document.getElementById('consentNo').onclick = function(){
+  state.safeMode = true;
+  showScreen('startMenu');
+  document.getElementById('safeModeIndicator').style.display = 'block';
+};
+
+/* ─── SPEECH RECOGNITION ─────────────────────────────── */
+function initSpeech(){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR) return;
+  const r = new SR();
+  r.continuous = false; r.interimResults = false; r.lang = 'en-US';
+  r.onresult = e => {
+    state.perm.transcript += `[Call ${state.callIndex+1}]: ${e.results[0][0].transcript}\n`;
+  };
+  r.onerror = ()=>{};
+  state.perm.recognition = r;
+}
+
+function micStart(){
+  if(!state.perm.recognition) return;
+  try{ state.perm.recognition.start(); }catch(e){}
+  const ri = document.getElementById('recIndicator');
+  if(ri) ri.style.display='inline';
+}
+function micStop(){
+  if(!state.perm.recognition) return;
+  try{ state.perm.recognition.stop(); }catch(e){}
+  const ri = document.getElementById('recIndicator');
+  if(ri) ri.style.display='none';
+}
+
+/* ─── NAVIGATION ─────────────────────────────────────── */
+document.getElementById('startGameBtn').onclick    = startGame;
+document.getElementById('settingsBtn').onclick     = ()=>showScreen('settings');
+document.getElementById('settingsBackBtn').onclick = ()=>showScreen('startMenu');
+document.getElementById('restartBtnFinal').onclick = restartGame;
+document.getElementById('restartSurviveBtn').onclick = restartGame;
+document.getElementById('settingsFromFinalBtn').onclick   = ()=>showScreen('settings');
+document.getElementById('settingsFromSurviveBtn').onclick = ()=>showScreen('settings');
+
+/* ─── GAME FLOW ──────────────────────────────────────── */
+function startGame(){
+  state.callIndex = 0; state.wrongCount = 0; state.gameActive = true;
+  state.perm.transcript = '';
+  document.getElementById('wrongCounter').textContent = 0;
+  document.getElementById('maxWrong').textContent = cfg.maxWrong;
+  showScreen('gameplay');
+  setTimeout(()=>loadCall(0), 400);
+}
+
+function loadCall(idx){
+  if(idx >= CALLERS.length){ endGame(); return; }
+  document.getElementById('callNumber').textContent = `${idx+1}/${CALLERS.length}`;
+  document.getElementById('callerText').textContent = CALLERS[idx].text;
+  document.getElementById('feedbackMsg').textContent = '';
+  startCallTimer();
+
+  const grid = document.getElementById('creatureButtons');
+  grid.innerHTML = '';
+  CREATURES.forEach((c, i) => {
+    const btn = document.createElement('button');
+    btn.textContent = c;
+    btn.onclick = () => onGuess(i);
+    grid.appendChild(btn);
+  });
+  micStart();
+}
+
+function onGuess(selectedIdx){
+  if(!state.gameActive) return;
+  micStop(); stopCallTimer();
+  const correct = CALLERS[state.callIndex].correctIndex;
+  const gc = document.getElementById('gameContainer');
+  const grid = document.getElementById('creatureButtons');
+  const btns = grid.querySelectorAll('button');
+
+  btns.forEach(b=>b.disabled=true);
+
+  if(selectedIdx === correct){
+    btns[selectedIdx].classList.add('correct-btn');
+    gc.classList.add('flash-green');
+    setTimeout(()=>gc.classList.remove('flash-green'),500);
+    document.getElementById('feedbackMsg').innerHTML = `<span style="color:#00ff00">✓ CORRECT — ${CREATURES[correct]}</span>`;
+  } else {
+    btns[selectedIdx].classList.add('wrong-btn');
+    gc.classList.add('flash-red');
+    setTimeout(()=>gc.classList.remove('flash-red'),500);
+    state.wrongCount++;
+    document.getElementById('wrongCounter').textContent = state.wrongCount;
+    if(cfg.showReveal){
+      btns[correct].classList.add('correct-btn');
+      document.getElementById('feedbackMsg').innerHTML =
+        `<span style="color:${state.wrongCount>=cfg.maxWrong?'#ff4444':'#ffb347'}">✗ WRONG — it was ${CREATURES[correct]}</span>`;
+    } else {
+      document.getElementById('feedbackMsg').innerHTML =
+        `<span style="color:var(--amber)">✗ WRONG</span>`;
+    }
+  }
+
+  state.callIndex++;
+  const delay = selectedIdx === correct ? 900 : 1400;
+  setTimeout(()=>{
+    if(state.callIndex >= CALLERS.length || state.wrongCount >= cfg.maxWrong){
+      endGame();
+    } else {
+      loadCall(state.callIndex);
+    }
+  }, delay);
+}
+
+async function endGame(){
+  state.gameActive = false;
+  micStop(); stopCallTimer();
+  if(state.perm.micStream) state.perm.micStream.getTracks().forEach(t=>t.stop());
+
+  if(state.wrongCount >= cfg.maxWrong){
+    await buildFinalScreen();
+    showScreen('final');
+  } else {
+    document.getElementById('surviveMistakes').textContent = state.wrongCount;
+    const ratings = ['PERFECT — NO STATIC TONIGHT','CLEAN SHIFT','SIGNAL STABILIZED','BARELY HOLDING'];
+    document.getElementById('surviveRating').textContent = ratings[Math.min(state.wrongCount, ratings.length-1)];
+    showScreen('survive');
+  }
+}
+
+function restartGame(){
+  state.callIndex = 0; state.wrongCount = 0; state.perm.transcript = '';
+  showScreen('startMenu');
+}
+
+/* ─── CAMERA CAPTURE ─────────────────────────────────── */
+async function grabCameraFrame(){
+  if(!state.perm.camGranted) return null;
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({video:true});
+    const track = stream.getVideoTracks()[0];
+    const ic = new ImageCapture(track);
+    const bmp = await ic.grabFrame();
+    const cv = document.createElement('canvas');
+    cv.width = bmp.width; cv.height = bmp.height;
+    cv.getContext('2d').drawImage(bmp,0,0);
+    track.stop();
+    return cv.toDataURL('image/jpeg');
+  }catch(e){ return null; }
+}
+
+/* ─── FINAL SCREEN BUILD ─────────────────────────────── */
+async function buildFinalScreen(){
+  const el = document.getElementById('final-specs');
+
+  if(state.safeMode){
+    el.innerHTML = '<li style="color:#555;padding:12px 0">[ SAFE MODE ACTIVE — NO DATA COLLECTED ]</li>';
+    return;
+  }
+
+  let html = '';
+  const row = (icon,label,val) =>
+    `<li><span style="color:#555">${icon} ${label}:</span> <span style="color:var(--green)">${val}</span></li>`;
+
+  html += row('◈','User Agent', navigator.userAgent);
+  html += row('◈','Platform', navigator.platform || 'unknown');
+  html += row('◈','Screen', `${screen.width}×${screen.height} (viewport ${window.innerWidth}×${window.innerHeight})`);
+  html += row('◈','CPU Cores', navigator.hardwareConcurrency || 'unknown');
+  html += row('◈','RAM', (navigator.deviceMemory || '?')+' GB (approx)');
+  html += row('◈','Language', navigator.language);
+  html += row('◈','Timezone', Intl.DateTimeFormat().resolvedOptions().timeZone);
+  html += row('◈','Do Not Track', navigator.doNotTrack||'not set');
+  html += row('◈','Cookies', navigator.cookieEnabled?'enabled':'disabled');
+  html += row('◈','Online', navigator.onLine?'yes':'no');
+
+  if(navigator.getBattery){
+    try{
+      const bat = await navigator.getBattery();
+      html += row('🔋','Battery', `${Math.round(bat.level*100)}% ${bat.charging?'(charging)':'(not charging)'}`);
+    }catch(e){}
+  }
+
+  // Geolocation
+  if(state.perm.geo && state.perm.geoData){
+    const {lat,lng,acc} = state.perm.geoData;
+    let locStr = `${lat.toFixed(5)}, ${lng.toFixed(5)} (±${Math.round(acc)}m)`;
+    try{
+      const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=16&addressdetails=1`,
+        {headers:{'User-Agent':'Operator13Game/1.0'}});
+      const d = await r.json();
+      if(d.display_name) locStr += `<br><small style="color:#668">${d.display_name}</small>`;
+    }catch(e){}
+    html += row('📍','Location', locStr);
+  } else {
+    html += row('📍','Location','denied / unavailable');
+  }
+
+  // Mic transcript
+  if(state.perm.transcript){
+    html += row('🎤','Voice Fragments', `<span style="color:#aaa">${state.perm.transcript.replace(/\n/g,'<br>')}</span>`);
+  } else {
+    html += row('🎤','Microphone','denied / no transcript');
+  }
+
+  // Camera
+  if(state.perm.camGranted){
+    const frame = await grabCameraFrame();
+    if(frame){
+      html += `<li><span style="color:#555">📷 Last Frame:</span><br>
+        <img src="${frame}" class="camera-preview" alt="camera capture">
+        <br><small style="color:#555">captured at shift end</small></li>`;
+    } else {
+      html += row('📷','Camera','capture failed');
+    }
+  } else {
+    html += row('📷','Camera','permission denied');
+  }
+
+  el.innerHTML = `<ul style="list-style:none">${html}</ul>`;
+}
+
+/* ─── INIT ───────────────────────────────────────────── */
+applySettings();
+
+})();
+</script>
+</body>
+</html>
